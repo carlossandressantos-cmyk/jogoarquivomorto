@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquivo Morto - Evidência</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos Personalizados para o tema Investigação */
+        body {
+            font-family: 'Courier Prime', monospace;
+            background-color: #1a1a1a;
+            color: #e5e5e5;
+            overflow-x: hidden;
+        }
+
+        .title-font {
+            font-family: 'Special Elite', cursive;
+        }
+
+        /* Efeito de papel velho/textura */
+        .paper-texture {
+            background-color: #f0f0f0;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
+                url('https://www.transparenttextures.com/patterns/aged-paper.png');
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Efeito de fita de cena de crime */
+        .crime-tape {
+            background: repeating-linear-gradient(
+                45deg,
+                #fbbf24,
+                #fbbf24 10px,
+                #000 10px,
+                #000 20px
+            );
+        }
+
+        /* Animação de carimbo */
+        .stamp-animate {
+            animation: stamp-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+            transform: scale(3) rotate(-15deg);
+        }
+
+        @keyframes stamp-in {
+            to {
+                opacity: 1;
+                transform: scale(1) rotate(-15deg);
+            }
+        }
+
+        /* Background placeholder (caso o usuário não coloque imagem) */
+        .bg-investigation {
+            background-color: #000000;
+            background-image: url('https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/fundo-site.png?raw=true');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+    </style>
+</head>
+<body class="bg-investigation min-h-screen flex items-center justify-center p-4">
+
+    <!-- Container Principal (Pasta do Caso) -->
+    <div class="paper-texture text-gray-900 w-full max-w-2xl rounded-sm p-2 relative transform rotate-1 border-t-8 border-yellow-700">
+        
+        <!-- Clipe de papel visual -->
+        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 w-32 h-8 bg-gray-400 rounded-t-lg opacity-80 shadow-md"></div>
+
+        <div class="border-2 border-gray-400 border-dashed p-6 h-full flex flex-col items-center">
+            
+            <!-- Logo / Cabeçalho -->
+            <header class="w-full flex flex-col items-center mb-8 border-b-2 border-gray-800 pb-4">
+                <!-- 
+                   Logo inserido conforme solicitado
+                -->
+                <img id="game-logo" src="https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/logo-site.png?raw=true" alt="Arquivo Morto Logo" class="h-32 object-contain mb-4 drop-shadow-sm" onerror="this.style.display='none'; document.getElementById('text-logo').classList.remove('hidden');">
+                
+                <!-- O texto agora fica oculto (hidden) por padrão, só aparece se a imagem der erro -->
+                <div id="text-logo" class="text-center hidden">
+                    <h1 class="text-4xl title-font font-bold uppercase tracking-widest text-red-900">Arquivo Morto</h1>
+                    <p class="text-xs uppercase tracking-widest mt-1 text-gray-600">Departamento de Investigações Criminais</p>
+                    <p class="text-xs font-bold mt-2">CASO Nº: <span id="case-id">839-21B</span></p>
+                </div>
+            </header>
+
+            <!-- Área de Status / Mensagens -->
+            <div id="status-message" class="mb-6 h-8 text-center font-bold text-lg text-slate-800">
+                Selecione uma evidência abaixo.
+            </div>
+
+            <!-- GRID DE SELEÇÃO (Fase 1) -->
+            <div id="selection-grid" class="grid grid-cols-3 gap-4 mb-8 w-full max-w-md">
+                <!-- Botões gerados via JS, mas estrutura seria assim: -->
+                <button onclick="selectNumber(1)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="1">
+                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">1</span>
+                </button>
+                <button onclick="selectNumber(2)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="2">
+                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">2</span>
+                </button>
+                <button onclick="selectNumber(3)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="3">
+                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">3</span>
+                </button>
+                <button onclick="selectNumber(4)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="4">
+                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">4</span>
+                </button>
+                <button onclick="selectNumber(5)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="5">
+                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">5</span>
+                </button>
+                <button onclick="selectNumber(6)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="6">
+                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">6</span>
+                </button>
+            </div>
+
+            <!-- TELA DE OCULTAÇÃO (Fase 2 - Escondido) -->
+            <div id="hidden-screen" class="hidden w-full max-w-md h-64 border-4 border-double border-red-900 flex items-center justify-center relative bg-gray-200 mb-8">
+                <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]"></div>
+                <div class="stamp-animate border-4 border-red-800 text-red-800 p-2 font-bold text-2xl uppercase tracking-widest title-font opacity-0 transform scale-150 rotate-[-15deg]">
+                    Confidencial
+                </div>
+            </div>
+
+            <!-- TELA DE REVELAÇÃO (Fase 3 - Resultado) -->
+            <div id="reveal-screen" class="hidden w-full max-w-md h-64 flex flex-col items-center justify-center mb-8 relative">
+                <p class="text-sm uppercase tracking-widest mb-2">A evidência selecionada foi:</p>
+                <div class="w-32 h-32 bg-yellow-400 text-black border-4 border-black flex items-center justify-center shadow-lg transform rotate-2">
+                    <span id="final-number" class="text-6xl font-bold title-font">?</span>
+                </div>
+                <div class="mt-4 w-full h-4 crime-tape"></div>
+            </div>
+
+            <!-- BOTÕES DE CONTROLE -->
+            <div class="flex flex-wrap gap-4 justify-center w-full mt-auto">
+                
+                <!-- Botão Ocultar -->
+                <button id="btn-hide" onclick="hideSelection()" class="px-6 py-3 bg-gray-800 text-white font-bold tracking-wider hover:bg-gray-700 transition-colors border-b-4 border-gray-950 active:border-b-0 active:translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                    OCULTAR
+                </button>
+
+                <!-- Botão Mostrar -->
+                <button id="btn-reveal" onclick="revealSelection()" class="hidden px-6 py-3 bg-red-800 text-white font-bold tracking-wider hover:bg-red-700 transition-colors border-b-4 border-red-950 active:border-b-0 active:translate-y-1 animate-pulse">
+                    MOSTRAR
+                </button>
+
+                <!-- Botão Restaurar -->
+                <button onclick="resetGame()" class="px-6 py-3 bg-yellow-600 text-white font-bold tracking-wider hover:bg-yellow-500 transition-colors border-b-4 border-yellow-800 active:border-b-0 active:translate-y-1">
+                    RESTAURAR
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Estado do Jogo
+        let currentSelection = null;
+        let isHidden = false;
+
+        // Elementos do DOM
+        const gridEl = document.getElementById('selection-grid');
+        const hiddenScreenEl = document.getElementById('hidden-screen');
+        const revealScreenEl = document.getElementById('reveal-screen');
+        const statusEl = document.getElementById('status-message');
+        const btnHide = document.getElementById('btn-hide');
+        const btnReveal = document.getElementById('btn-reveal');
+        const finalNumberEl = document.getElementById('final-number');
+        const caseIdEl = document.getElementById('case-id');
+
+        // Gera um ID de caso aleatório ao carregar
+        caseIdEl.innerText = Math.floor(100 + Math.random() * 900) + "-" + String.fromCharCode(65 + Math.random() * 26) + String.fromCharCode(65 + Math.random() * 26);
+
+        // Função para selecionar um número
+        function selectNumber(num) {
+            if (isHidden) return; // Não permite mudar se já estiver oculto
+
+            currentSelection = num;
+            
+            // Remove estilo de selecionado de todos
+            document.querySelectorAll('.evidence-btn').forEach(btn => {
+                btn.classList.remove('bg-yellow-200', 'border-yellow-600', 'ring-2', 'ring-yellow-500');
+                btn.classList.add('bg-gray-200', 'border-gray-800');
+            });
+
+            // Adiciona estilo ao selecionado
+            const selectedBtn = document.querySelector(`.evidence-btn[data-id="${num}"]`);
+            if (selectedBtn) {
+                selectedBtn.classList.remove('bg-gray-200', 'border-gray-800');
+                selectedBtn.classList.add('bg-yellow-200', 'border-yellow-600', 'ring-2', 'ring-yellow-500');
+            }
+
+            statusEl.innerText = "Evidência " + num + " selecionada.";
+            statusEl.classList.remove('text-red-600');
+        }
+
+        // Função para ocultar a seleção
+        function hideSelection() {
+            if (currentSelection === null) {
+                statusEl.innerText = "ERRO: Nenhuma evidência selecionada!";
+                statusEl.classList.add('text-red-600');
+                shakeStatus();
+                return;
+            }
+
+            isHidden = true;
+            
+            // Troca as telas
+            gridEl.classList.add('hidden');
+            hiddenScreenEl.classList.remove('hidden');
+            hiddenScreenEl.classList.add('flex'); // Flex para centralizar
+            
+            // Controle dos botões
+            btnHide.classList.add('hidden');
+            btnReveal.classList.remove('hidden');
+
+            statusEl.innerText = "Evidência arquivada. Aguardando revelação...";
+            statusEl.classList.remove('text-red-600');
+
+            // Reinicia a animação do carimbo
+            const stamp = document.querySelector('.stamp-animate');
+            stamp.style.animation = 'none';
+            stamp.offsetHeight; /* trigger reflow */
+            stamp.style.animation = null; 
+        }
+
+        // Função para revelar a seleção
+        function revealSelection() {
+            if (!isHidden) return;
+
+            // Troca as telas
+            hiddenScreenEl.classList.add('hidden');
+            hiddenScreenEl.classList.remove('flex');
+            revealScreenEl.classList.remove('hidden');
+            revealScreenEl.classList.add('flex');
+
+            // Atualiza o número
+            finalNumberEl.innerText = currentSelection;
+
+            // Controle dos botões
+            btnReveal.classList.add('hidden');
+
+            statusEl.innerText = "CASO REABERTO: Evidência revelada.";
+        }
+
+        // Função para restaurar/resetar o jogo
+        function resetGame() {
+            currentSelection = null;
+            isHidden = false;
+
+            // Reseta telas
+            gridEl.classList.remove('hidden');
+            hiddenScreenEl.classList.add('hidden');
+            hiddenScreenEl.classList.remove('flex');
+            revealScreenEl.classList.add('hidden');
+            revealScreenEl.classList.remove('flex');
+
+            // Reseta botões
+            btnHide.classList.remove('hidden');
+            btnReveal.classList.add('hidden');
+
+            // Limpa seleção visual
+            document.querySelectorAll('.evidence-btn').forEach(btn => {
+                btn.classList.remove('bg-yellow-200', 'border-yellow-600', 'ring-2', 'ring-yellow-500');
+                btn.classList.add('bg-gray-200', 'border-gray-800');
+            });
+
+            statusEl.innerText = "Selecione uma evidência abaixo.";
+            statusEl.classList.remove('text-red-600');
+        }
+
+        // Efeito visual de erro
+        function shakeStatus() {
+            statusEl.style.transform = "translateX(5px)";
+            setTimeout(() => statusEl.style.transform = "translateX(-5px)", 50);
+            setTimeout(() => statusEl.style.transform = "translateX(5px)", 100);
+            setTimeout(() => statusEl.style.transform = "translateX(0)", 150);
+        }
+    </script>
+</body>
+</html>
