@@ -332,8 +332,36 @@
             renderWordGrid();
         };
 
+        // === WAKE LOCK (Manter tela ativa) ===
+        let wakeLock = null;
+
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    console.log('Wake Lock is active');
+                    
+                    wakeLock.addEventListener('release', () => {
+                        console.log('Wake Lock has been released');
+                    });
+                }
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+            }
+        }
+
+        // Recuperar o wake lock se a página ficar visível novamente
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
         // === TELA INICIAL (SPLASH) ===
-        function startGame() {
+        async function startGame() {
+            // Tenta ativar o Wake Lock ao iniciar
+            await requestWakeLock();
+
             const splash = document.getElementById('splash-screen');
             const mainContainer = document.getElementById('main-game-container');
             
