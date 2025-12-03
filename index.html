@@ -60,230 +60,501 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+
+        /* Animação de piscar para as palavras selecionadas */
+        @keyframes blink-alert {
+            0%, 100% { opacity: 1; text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
+            50% { opacity: 0.4; text-shadow: none; }
+        }
+        
+        .blinking-text {
+            animation: blink-alert 1.5s infinite;
+        }
+
+        /* Animação de piscar forte (PULSE) para o logo na tela inicial */
+        @keyframes strong-pulse {
+            0%, 100% { 
+                opacity: 1; 
+                transform: scale(1); 
+                filter: drop-shadow(0 0 15px rgba(200, 0, 0, 0.5));
+            }
+            50% { 
+                opacity: 0.2; /* Opacidade bem baixa para parecer que está piscando */
+                transform: scale(0.95); 
+                filter: drop-shadow(0 0 0 rgba(0,0,0,0));
+            }
+        }
+
+        .logo-breath {
+            animation: strong-pulse 1.5s ease-in-out infinite;
+        }
+
+        /* Estilo da barra de rolagem para a lista de palavras */
+        .word-list-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        .word-list-container::-webkit-scrollbar-track {
+            background: #e5e5e5;
+        }
+        .word-list-container::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        /* Transição suave para esconder a tela inicial */
+        .fade-out {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease-out;
         }
     </style>
 </head>
-<body class="bg-investigation min-h-screen flex items-center justify-center p-4">
+<body class="bg-investigation min-h-screen flex flex-col items-center justify-start p-4">
+
+    <!-- TELA INICIAL (Splash Screen) -->
+    <div id="splash-screen" class="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
+        <!-- Fundo da Splash Screen (mesma imagem, mas pode ter um overlay mais escuro) -->
+        <div class="absolute inset-0 bg-investigation opacity-50"></div>
+        <div class="absolute inset-0 bg-black opacity-60"></div> <!-- Camada escura extra para contraste -->
+
+        <div class="relative z-10 flex flex-col items-center text-center">
+        
+        <!-- Logo Piscando -->
+        <img src="https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/logo-site.png?raw=true" 
+             alt="Arquivo Morto Logo" 
+             class="h-48 md:h-64 object-contain mb-8 logo-breath drop-shadow-2xl">
+        
+        <div class="text-gray-400 text-sm tracking-[0.2em] mb-12 font-bold uppercase">
+            Acesso Restrito // Departamento de Casos Frios
+        </div>
+
+            <!-- Botão Iniciar -->
+            <button onclick="startGame()" class="group relative px-8 py-4 bg-transparent border-2 border-red-800 text-red-600 font-bold text-xl uppercase tracking-widest hover:bg-red-900/20 hover:text-red-500 hover:border-red-600 transition-all duration-300">
+                <span class="absolute inset-0 w-full h-full bg-red-800/10 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                <span class="relative flex items-center gap-2">
+                    <span class="w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
+                    Iniciar Investigação
+                </span>
+            </button>
+        </div>
+
+        <div class="absolute bottom-8 text-gray-600 text-xs font-mono">
+            SISTEMA SEGURO v2.0.4b
+        </div>
+    </div>
 
     <!-- Container Principal (Pasta do Caso) -->
-    <div class="paper-texture text-gray-900 w-full max-w-2xl rounded-sm p-2 relative transform rotate-1 border-t-8 border-yellow-700">
+    <!-- Inicialmente com opacidade baixa ou escondido se preferir, mas a splash screen cobre tudo -->
+    <div id="main-game-container" class="paper-texture text-gray-900 w-full max-w-4xl rounded-sm p-2 relative mt-4 mb-8 border-t-8 border-yellow-700 shadow-2xl transition-opacity duration-1000 opacity-0">
         
         <!-- Clipe de papel visual -->
         <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 w-32 h-8 bg-gray-400 rounded-t-lg opacity-80 shadow-md"></div>
 
-        <div class="border-2 border-gray-400 border-dashed p-6 h-full flex flex-col items-center">
+        <div class="border-2 border-gray-400 border-dashed p-4 md:p-6 h-full flex flex-col items-center min-h-[600px]">
             
-            <!-- Logo / Cabeçalho -->
-            <header class="w-full flex flex-col items-center mb-8 border-b-2 border-gray-800 pb-4">
-                <!-- 
-                   Logo inserido conforme solicitado
-                -->
-                <img id="game-logo" src="https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/logo-site.png?raw=true" alt="Arquivo Morto Logo" class="h-32 object-contain mb-4 drop-shadow-sm" onerror="this.style.display='none'; document.getElementById('text-logo').classList.remove('hidden');">
-                
-                <!-- O texto agora fica oculto (hidden) por padrão, só aparece se a imagem der erro -->
-                <div id="text-logo" class="text-center hidden">
-                    <h1 class="text-4xl title-font font-bold uppercase tracking-widest text-red-900">Arquivo Morto</h1>
-                    <p class="text-xs uppercase tracking-widest mt-1 text-gray-600">Departamento de Investigações Criminais</p>
-                    <p class="text-xs font-bold mt-2">CASO Nº: <span id="case-id">839-21B</span></p>
+            <!-- Cabeçalho Fixo -->
+        <header class="w-full flex flex-col items-center mb-6 border-b-2 border-gray-800 pb-4">
+            <img id="game-logo" src="https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/logo-site.png?raw=true" alt="Arquivo Morto Logo" class="h-24 md:h-32 object-contain mb-2 drop-shadow-sm" onerror="this.style.display='none'; document.getElementById('text-logo').classList.remove('hidden');">
+            
+            <div id="text-logo" class="text-center hidden">
+                <h1 class="text-4xl title-font font-bold uppercase tracking-widest text-red-900">Arquivo Morto</h1>
+            </div>
+
+                <!-- Menu de Navegação -->
+                <div class="flex gap-4 mt-4 w-full justify-center">
+                    <button onclick="switchMode('numbers')" id="nav-numbers" class="px-4 py-2 bg-gray-800 text-white text-sm font-bold uppercase tracking-wider border-b-4 border-gray-950 active:translate-y-1 transition-all">
+                        Evidência Numérica
+                    </button>
+                    <button onclick="switchMode('words')" id="nav-words" class="px-4 py-2 bg-gray-300 text-gray-700 text-sm font-bold uppercase tracking-wider border-b-4 border-gray-400 hover:bg-gray-400 active:translate-y-1 transition-all">
+                        Associação de Palavras
+                    </button>
                 </div>
             </header>
 
-            <!-- Área de Status / Mensagens -->
-            <div id="status-message" class="mb-6 h-8 text-center font-bold text-lg text-slate-800">
-                Selecione uma evidência abaixo.
-            </div>
+            <!-- ========================================== -->
+            <!-- MODO 1: EVIDÊNCIA NUMÉRICA -->
+            <!-- ========================================== -->
+            <div id="mode-numbers" class="w-full flex flex-col items-center flex-grow">
+                <!-- Área de Status -->
+                <div id="status-message-num" class="mb-6 h-8 text-center font-bold text-lg text-slate-800">
+                    Selecione uma evidência numérica.
+                </div>
 
-            <!-- GRID DE SELEÇÃO (Fase 1) -->
-            <div id="selection-grid" class="grid grid-cols-3 gap-4 mb-8 w-full max-w-md">
-                <!-- Botões gerados via JS, mas estrutura seria assim: -->
-                <button onclick="selectNumber(1)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="1">
-                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
-                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">1</span>
-                </button>
-                <button onclick="selectNumber(2)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="2">
-                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
-                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">2</span>
-                </button>
-                <button onclick="selectNumber(3)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="3">
-                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
-                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">3</span>
-                </button>
-                <button onclick="selectNumber(4)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="4">
-                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
-                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">4</span>
-                </button>
-                <button onclick="selectNumber(5)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="5">
-                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
-                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">5</span>
-                </button>
-                <button onclick="selectNumber(6)" class="evidence-btn group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="6">
-                    <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
-                    <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">6</span>
-                </button>
-            </div>
+                <!-- GRID DE SELEÇÃO (Números) -->
+                <div id="selection-grid-num" class="grid grid-cols-3 gap-4 mb-8 w-full max-w-md">
+                    <button onclick="selectNumber(1)" class="evidence-btn-num group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="1">
+                        <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                        <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">1</span>
+                    </button>
+                    <button onclick="selectNumber(2)" class="evidence-btn-num group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="2">
+                        <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                        <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">2</span>
+                    </button>
+                    <button onclick="selectNumber(3)" class="evidence-btn-num group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="3">
+                        <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                        <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">3</span>
+                    </button>
+                    <button onclick="selectNumber(4)" class="evidence-btn-num group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="4">
+                        <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                        <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">4</span>
+                    </button>
+                    <button onclick="selectNumber(5)" class="evidence-btn-num group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="5">
+                        <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                        <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">5</span>
+                    </button>
+                    <button onclick="selectNumber(6)" class="evidence-btn-num group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none" data-id="6">
+                        <span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span>
+                        <span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">6</span>
+                    </button>
+                </div>
 
-            <!-- TELA DE OCULTAÇÃO (Fase 2 - Escondido) -->
-            <div id="hidden-screen" class="hidden w-full max-w-md h-64 border-4 border-double border-red-900 flex items-center justify-center relative bg-gray-200 mb-8">
-                <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]"></div>
-                <div class="stamp-animate border-4 border-red-800 text-red-800 p-2 font-bold text-2xl uppercase tracking-widest title-font opacity-0 transform scale-150 rotate-[-15deg]">
-                    Confidencial
+                <!-- TELA DE OCULTAÇÃO (Números) -->
+                <div id="hidden-screen-num" class="hidden w-full max-w-md h-64 border-4 border-double border-red-900 flex items-center justify-center relative bg-gray-200 mb-8">
+                    <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]"></div>
+                    <div class="stamp-animate border-4 border-red-800 text-red-800 p-2 font-bold text-2xl uppercase tracking-widest title-font opacity-0 transform scale-150 rotate-[-15deg]">
+                        Confidencial
+                    </div>
+                </div>
+
+                <!-- TELA DE REVELAÇÃO (Números) -->
+                <div id="reveal-screen-num" class="hidden w-full max-w-md h-64 flex flex-col items-center justify-center mb-8 relative">
+                    <p class="text-sm uppercase tracking-widest mb-2">A evidência selecionada foi:</p>
+                    <div class="w-32 h-32 bg-yellow-400 text-black border-4 border-black flex items-center justify-center shadow-lg transform rotate-2">
+                        <span id="final-number" class="text-6xl font-bold title-font">?</span>
+                    </div>
+                    <div class="mt-4 w-full h-4 crime-tape"></div>
+                </div>
+
+                <!-- BOTÕES NUMÉRICOS -->
+                <div class="flex flex-wrap gap-4 justify-center w-full mt-auto">
+                    <button id="btn-hide-num" onclick="hideSelectionNum()" class="px-6 py-3 bg-gray-800 text-white font-bold tracking-wider hover:bg-gray-700 transition-colors border-b-4 border-gray-950 active:border-b-0 active:translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                        OCULTAR
+                    </button>
+                    <button id="btn-reveal-num" onclick="revealSelectionNum()" class="hidden px-6 py-3 bg-red-800 text-white font-bold tracking-wider hover:bg-red-700 transition-colors border-b-4 border-red-950 active:border-b-0 active:translate-y-1 animate-pulse">
+                        MOSTRAR
+                    </button>
+                    <button onclick="resetGameNum()" class="px-6 py-3 bg-yellow-600 text-white font-bold tracking-wider hover:bg-yellow-500 transition-colors border-b-4 border-yellow-800 active:border-b-0 active:translate-y-1">
+                        RESTAURAR
+                    </button>
                 </div>
             </div>
 
-            <!-- TELA DE REVELAÇÃO (Fase 3 - Resultado) -->
-            <div id="reveal-screen" class="hidden w-full max-w-md h-64 flex flex-col items-center justify-center mb-8 relative">
-                <p class="text-sm uppercase tracking-widest mb-2">A evidência selecionada foi:</p>
-                <div class="w-32 h-32 bg-yellow-400 text-black border-4 border-black flex items-center justify-center shadow-lg transform rotate-2">
-                    <span id="final-number" class="text-6xl font-bold title-font">?</span>
+
+            <!-- ========================================== -->
+            <!-- MODO 2: ASSOCIAÇÃO DE PALAVRAS -->
+            <!-- ========================================== -->
+            <div id="mode-words" class="hidden w-full flex flex-col items-center flex-grow">
+                <!-- Área de Status -->
+                <div id="status-message-words" class="mb-4 h-8 text-center font-bold text-lg text-slate-800">
+                    Selecione exatamente 2 palavras (<span id="count-words">0</span>/2)
                 </div>
-                <div class="mt-4 w-full h-4 crime-tape"></div>
+
+                <!-- GRID DE PALAVRAS (Fase 1) -->
+                <div id="selection-grid-words" class="w-full max-w-3xl word-list-container overflow-y-auto max-h-[400px] border border-gray-400 p-2 bg-white bg-opacity-50 mb-6">
+                    <div id="words-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                        <!-- Palavras serão inseridas via JS -->
+                    </div>
+                </div>
+
+                <!-- TELA DE REVELAÇÃO (Palavras - Fase 2) -->
+                <div id="reveal-screen-words" class="hidden w-full flex-grow flex flex-col items-center justify-center relative min-h-[300px]">
+                    <div class="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+                        <span class="text-9xl font-bold text-red-900 rotate-[-30deg]">CONFIDENCIAL</span>
+                    </div>
+                    
+                    <div class="flex flex-col md:flex-row gap-8 items-center justify-center z-10 w-full">
+                        <!-- Palavra 1 -->
+                        <div class="bg-black text-white p-6 border-4 border-red-600 transform -rotate-2 shadow-2xl w-full md:w-5/12 text-center">
+                            <span id="final-word-1" class="text-3xl md:text-4xl lg:text-5xl font-bold title-font blinking-text break-words">PALAVRA</span>
+                        </div>
+                        
+                        <div class="text-2xl font-bold text-gray-800">+</div>
+
+                        <!-- Palavra 2 -->
+                        <div class="bg-black text-white p-6 border-4 border-red-600 transform rotate-2 shadow-2xl w-full md:w-5/12 text-center">
+                            <span id="final-word-2" class="text-3xl md:text-4xl lg:text-5xl font-bold title-font blinking-text break-words">PALAVRA</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-12 w-full h-8 crime-tape"></div>
+                </div>
+
+                <!-- BOTÕES PALAVRAS -->
+                <div class="flex flex-wrap gap-4 justify-center w-full mt-auto">
+                    <button id="btn-reveal-words" onclick="revealSelectionWords()" disabled class="px-8 py-4 bg-red-900 text-white font-bold text-xl tracking-widest hover:bg-red-800 transition-colors border-b-4 border-black active:border-b-0 active:translate-y-1 disabled:opacity-40 disabled:cursor-not-allowed">
+                        REVELAR SELEÇÃO
+                    </button>
+                    <button id="btn-reset-words" onclick="resetGameWords()" class="hidden px-6 py-3 bg-yellow-600 text-white font-bold tracking-wider hover:bg-yellow-500 transition-colors border-b-4 border-yellow-800 active:border-b-0 active:translate-y-1">
+                        NOVA SELEÇÃO
+                    </button>
+                </div>
             </div>
 
-            <!-- BOTÕES DE CONTROLE -->
-            <div class="flex flex-wrap gap-4 justify-center w-full mt-auto">
-                
-                <!-- Botão Ocultar -->
-                <button id="btn-hide" onclick="hideSelection()" class="px-6 py-3 bg-gray-800 text-white font-bold tracking-wider hover:bg-gray-700 transition-colors border-b-4 border-gray-950 active:border-b-0 active:translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed">
-                    OCULTAR
-                </button>
-
-                <!-- Botão Mostrar -->
-                <button id="btn-reveal" onclick="revealSelection()" class="hidden px-6 py-3 bg-red-800 text-white font-bold tracking-wider hover:bg-red-700 transition-colors border-b-4 border-red-950 active:border-b-0 active:translate-y-1 animate-pulse">
-                    MOSTRAR
-                </button>
-
-                <!-- Botão Restaurar -->
-                <button onclick="resetGame()" class="px-6 py-3 bg-yellow-600 text-white font-bold tracking-wider hover:bg-yellow-500 transition-colors border-b-4 border-yellow-800 active:border-b-0 active:translate-y-1">
-                    RESTAURAR
-                </button>
-            </div>
-
+        </div>
+        
+        <div class="text-center mt-2 text-xs text-gray-500 font-mono">
+            SISTEMA INTEGRADO DE ARQUIVO MORTO v2.0
         </div>
     </div>
 
     <script>
-        // Estado do Jogo
-        let currentSelection = null;
-        let isHidden = false;
+        // === DADOS DAS PALAVRAS ===
+        const wordsData = [
+            // Grupo A
+            "Chuva", "Nevoeiro", "Sombra", "Luz", "Ruído", "Silêncio", "Frio", "Calor", "Poeira", "Cinza", "Ecos", "Escuridão", "Reflexo", "Vazio", "Cheiro",
+            // Grupo B
+            "Sangue", "Vidro", "Metal", "Ferrugem", "Papel", "Chave", "Fio", "Relógio", "Espelho", "Máquina", "Faca", "Veneno", "Dinheiro", "Carta", "Telefone",
+            // Grupo C
+            "Verdade", "Mentira", "Segredo", "Culpa", "Inocência", "Tempo", "Passado", "Futuro", "Destino", "Acaso", "Lei", "Caos", "Poder", "Sonho", "Pesadelo",
+            // Grupo D
+            "Medo", "Raiva", "Desejo", "Vingança", "Fuga", "Busca", "Perda", "Espera", "Queda", "Olhar", "Toque", "Grito", "Sussurro", "Solidão", "Loucura",
+            // Grupo E
+            "Vítima", "Assassino", "Testemunha", "Criança", "Velho", "Mulher", "Homem", "Casa", "Rua", "Prisão", "Hospital", "Floresta", "Mar", "Ponte", "Janela",
+            // Grupo F
+            "Início", "Fim", "Sempre", "Nunca", "Talvez", "Antes", "Depois", "Dentro", "Fora", "Alto", "Baixo", "Rápido", "Lento", "Tudo", "Nada"
+        ];
 
-        // Elementos do DOM
-        const gridEl = document.getElementById('selection-grid');
-        const hiddenScreenEl = document.getElementById('hidden-screen');
-        const revealScreenEl = document.getElementById('reveal-screen');
-        const statusEl = document.getElementById('status-message');
-        const btnHide = document.getElementById('btn-hide');
-        const btnReveal = document.getElementById('btn-reveal');
-        const finalNumberEl = document.getElementById('final-number');
-        const caseIdEl = document.getElementById('case-id');
+        // === VARIÁVEIS GLOBAIS ===
+        let currentMode = 'numbers'; // 'numbers' ou 'words'
 
-        // Gera um ID de caso aleatório ao carregar
-        caseIdEl.innerText = Math.floor(100 + Math.random() * 900) + "-" + String.fromCharCode(65 + Math.random() * 26) + String.fromCharCode(65 + Math.random() * 26);
+        // ESTADO NUMÉRICO
+        let numSelection = null;
+        let numIsHidden = false;
 
-        // Função para selecionar um número
-        function selectNumber(num) {
-            if (isHidden) return; // Não permite mudar se já estiver oculto
+        // ESTADO PALAVRAS
+        let selectedWords = []; // Array para guardar até 2 palavras
+        let wordsRevealed = false;
 
-            currentSelection = num;
+        // === INICIALIZAÇÃO ===
+        window.onload = function() {
+            renderWordGrid();
+        };
+
+        // === TELA INICIAL (SPLASH) ===
+        function startGame() {
+            const splash = document.getElementById('splash-screen');
+            const mainContainer = document.getElementById('main-game-container');
             
-            // Remove estilo de selecionado de todos
-            document.querySelectorAll('.evidence-btn').forEach(btn => {
+            // Adiciona classe de fade-out
+            splash.classList.add('fade-out');
+            
+            // Revela o jogo suavemente
+            mainContainer.classList.remove('opacity-0');
+            mainContainer.classList.add('opacity-100');
+
+            // Remove a splash screen do DOM após a transição
+            setTimeout(() => {
+                splash.style.display = 'none';
+            }, 800);
+        }
+
+        // === CONTROLE DE MODO (Abas) ===
+        function switchMode(mode) {
+            currentMode = mode;
+            const modeNum = document.getElementById('mode-numbers');
+            const modeWords = document.getElementById('mode-words');
+            const btnNum = document.getElementById('nav-numbers');
+            const btnWords = document.getElementById('nav-words');
+
+            if (mode === 'numbers') {
+                modeNum.classList.remove('hidden');
+                modeWords.classList.add('hidden');
+                
+                // Estilo Botão Ativo
+                btnNum.classList.remove('bg-gray-300', 'text-gray-700', 'border-gray-400');
+                btnNum.classList.add('bg-gray-800', 'text-white', 'border-gray-950');
+                
+                // Estilo Botão Inativo
+                btnWords.classList.add('bg-gray-300', 'text-gray-700', 'border-gray-400');
+                btnWords.classList.remove('bg-gray-800', 'text-white', 'border-gray-950');
+
+            } else {
+                modeNum.classList.add('hidden');
+                modeWords.classList.remove('hidden');
+
+                // Estilo Botão Ativo
+                btnWords.classList.remove('bg-gray-300', 'text-gray-700', 'border-gray-400');
+                btnWords.classList.add('bg-gray-800', 'text-white', 'border-gray-950');
+
+                // Estilo Botão Inativo
+                btnNum.classList.add('bg-gray-300', 'text-gray-700', 'border-gray-400');
+                btnNum.classList.remove('bg-gray-800', 'text-white', 'border-gray-950');
+            }
+        }
+
+        // ==========================================
+        // LÓGICA: JOGO DE NÚMEROS
+        // ==========================================
+        function selectNumber(num) {
+            if (numIsHidden) return;
+            numSelection = num;
+            
+            // UI Update
+            document.querySelectorAll('.evidence-btn-num').forEach(btn => {
                 btn.classList.remove('bg-yellow-200', 'border-yellow-600', 'ring-2', 'ring-yellow-500');
                 btn.classList.add('bg-gray-200', 'border-gray-800');
             });
-
-            // Adiciona estilo ao selecionado
-            const selectedBtn = document.querySelector(`.evidence-btn[data-id="${num}"]`);
+            const selectedBtn = document.querySelector(`.evidence-btn-num[data-id="${num}"]`);
             if (selectedBtn) {
                 selectedBtn.classList.remove('bg-gray-200', 'border-gray-800');
                 selectedBtn.classList.add('bg-yellow-200', 'border-yellow-600', 'ring-2', 'ring-yellow-500');
             }
 
-            statusEl.innerText = "Evidência " + num + " selecionada.";
-            statusEl.classList.remove('text-red-600');
+            document.getElementById('status-message-num').innerText = "Evidência " + num + " selecionada.";
+            document.getElementById('status-message-num').classList.remove('text-red-600');
         }
 
-        // Função para ocultar a seleção
-        function hideSelection() {
-            if (currentSelection === null) {
-                statusEl.innerText = "ERRO: Nenhuma evidência selecionada!";
-                statusEl.classList.add('text-red-600');
-                shakeStatus();
+        function hideSelectionNum() {
+            if (numSelection === null) {
+                const status = document.getElementById('status-message-num');
+                status.innerText = "ERRO: Nenhuma evidência selecionada!";
+                status.classList.add('text-red-600');
                 return;
             }
-
-            isHidden = true;
+            numIsHidden = true;
+            document.getElementById('selection-grid-num').classList.add('hidden');
+            document.getElementById('hidden-screen-num').classList.remove('hidden');
+            document.getElementById('hidden-screen-num').classList.add('flex');
             
-            // Troca as telas
-            gridEl.classList.add('hidden');
-            hiddenScreenEl.classList.remove('hidden');
-            hiddenScreenEl.classList.add('flex'); // Flex para centralizar
+            document.getElementById('btn-hide-num').classList.add('hidden');
+            document.getElementById('btn-reveal-num').classList.remove('hidden');
             
-            // Controle dos botões
-            btnHide.classList.add('hidden');
-            btnReveal.classList.remove('hidden');
-
-            statusEl.innerText = "Evidência arquivada. Aguardando revelação...";
-            statusEl.classList.remove('text-red-600');
-
-            // Reinicia a animação do carimbo
-            const stamp = document.querySelector('.stamp-animate');
-            stamp.style.animation = 'none';
-            stamp.offsetHeight; /* trigger reflow */
-            stamp.style.animation = null; 
+            document.getElementById('status-message-num').innerText = "Evidência arquivada. Aguardando revelação...";
         }
 
-        // Função para revelar a seleção
-        function revealSelection() {
-            if (!isHidden) return;
-
-            // Troca as telas
-            hiddenScreenEl.classList.add('hidden');
-            hiddenScreenEl.classList.remove('flex');
-            revealScreenEl.classList.remove('hidden');
-            revealScreenEl.classList.add('flex');
-
-            // Atualiza o número
-            finalNumberEl.innerText = currentSelection;
-
-            // Controle dos botões
-            btnReveal.classList.add('hidden');
-
-            statusEl.innerText = "CASO REABERTO: Evidência revelada.";
+        function revealSelectionNum() {
+            if (!numIsHidden) return;
+            document.getElementById('hidden-screen-num').classList.add('hidden');
+            document.getElementById('hidden-screen-num').classList.remove('flex');
+            document.getElementById('reveal-screen-num').classList.remove('hidden');
+            document.getElementById('reveal-screen-num').classList.add('flex');
+            
+            document.getElementById('final-number').innerText = numSelection;
+            document.getElementById('btn-reveal-num').classList.add('hidden');
+            document.getElementById('status-message-num').innerText = "CASO REABERTO: Evidência revelada.";
         }
 
-        // Função para restaurar/resetar o jogo
-        function resetGame() {
-            currentSelection = null;
-            isHidden = false;
+        function resetGameNum() {
+            numSelection = null;
+            numIsHidden = false;
+            
+            document.getElementById('selection-grid-num').classList.remove('hidden');
+            document.getElementById('hidden-screen-num').classList.add('hidden');
+            document.getElementById('hidden-screen-num').classList.remove('flex');
+            document.getElementById('reveal-screen-num').classList.add('hidden');
+            document.getElementById('reveal-screen-num').classList.remove('flex');
+            
+            document.getElementById('btn-hide-num').classList.remove('hidden');
+            document.getElementById('btn-reveal-num').classList.add('hidden');
 
-            // Reseta telas
-            gridEl.classList.remove('hidden');
-            hiddenScreenEl.classList.add('hidden');
-            hiddenScreenEl.classList.remove('flex');
-            revealScreenEl.classList.add('hidden');
-            revealScreenEl.classList.remove('flex');
-
-            // Reseta botões
-            btnHide.classList.remove('hidden');
-            btnReveal.classList.add('hidden');
-
-            // Limpa seleção visual
-            document.querySelectorAll('.evidence-btn').forEach(btn => {
+            document.querySelectorAll('.evidence-btn-num').forEach(btn => {
                 btn.classList.remove('bg-yellow-200', 'border-yellow-600', 'ring-2', 'ring-yellow-500');
                 btn.classList.add('bg-gray-200', 'border-gray-800');
             });
-
-            statusEl.innerText = "Selecione uma evidência abaixo.";
-            statusEl.classList.remove('text-red-600');
+            document.getElementById('status-message-num').innerText = "Selecione uma evidência numérica.";
         }
 
-        // Efeito visual de erro
-        function shakeStatus() {
-            statusEl.style.transform = "translateX(5px)";
-            setTimeout(() => statusEl.style.transform = "translateX(-5px)", 50);
-            setTimeout(() => statusEl.style.transform = "translateX(5px)", 100);
-            setTimeout(() => statusEl.style.transform = "translateX(0)", 150);
+
+        // ==========================================
+        // LÓGICA: JOGO DE PALAVRAS
+        // ==========================================
+        function renderWordGrid() {
+            const container = document.getElementById('words-container');
+            container.innerHTML = '';
+
+            wordsData.forEach((word, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'word-btn text-xs md:text-sm p-2 border border-gray-400 bg-gray-100 hover:bg-yellow-100 font-mono transition-colors truncate';
+                btn.innerText = word;
+                btn.onclick = () => toggleWordSelection(word, btn);
+                btn.id = `word-btn-${index}`;
+                container.appendChild(btn);
+            });
         }
+
+        function toggleWordSelection(word, btnElement) {
+            if (wordsRevealed) return;
+
+            const index = selectedWords.indexOf(word);
+            
+            if (index > -1) {
+                // Deselecionar
+                selectedWords.splice(index, 1);
+                btnElement.classList.remove('bg-yellow-400', 'border-black', 'font-bold');
+                btnElement.classList.add('bg-gray-100', 'border-gray-400');
+            } else {
+                // Selecionar (apenas se tiver menos de 2)
+                if (selectedWords.length < 2) {
+                    selectedWords.push(word);
+                    btnElement.classList.remove('bg-gray-100', 'border-gray-400');
+                    btnElement.classList.add('bg-yellow-400', 'border-black', 'font-bold');
+                }
+            }
+
+            updateWordGameUI();
+        }
+
+        function updateWordGameUI() {
+            const countSpan = document.getElementById('count-words');
+            const btnReveal = document.getElementById('btn-reveal-words');
+            
+            countSpan.innerText = selectedWords.length;
+
+            if (selectedWords.length === 2) {
+                btnReveal.disabled = false;
+                btnReveal.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnReveal.classList.add('animate-pulse');
+            } else {
+                btnReveal.disabled = true;
+                btnReveal.classList.add('opacity-50', 'cursor-not-allowed');
+                btnReveal.classList.remove('animate-pulse');
+            }
+        }
+
+        function revealSelectionWords() {
+            if (selectedWords.length !== 2) return;
+
+            wordsRevealed = true;
+
+            // Esconder Grid, Mostrar Resultado
+            document.getElementById('selection-grid-words').classList.add('hidden');
+            document.getElementById('btn-reveal-words').classList.add('hidden');
+            
+            const revealScreen = document.getElementById('reveal-screen-words');
+            revealScreen.classList.remove('hidden');
+            revealScreen.classList.add('flex');
+
+            document.getElementById('final-word-1').innerText = selectedWords[0];
+            document.getElementById('final-word-2').innerText = selectedWords[1];
+
+            document.getElementById('btn-reset-words').classList.remove('hidden');
+            document.getElementById('status-message-words').innerText = "ASSOCIAÇÃO CONFIRMADA";
+        }
+
+        function resetGameWords() {
+            selectedWords = [];
+            wordsRevealed = false;
+
+            // Limpar estilos dos botões
+            document.querySelectorAll('.word-btn').forEach(btn => {
+                btn.classList.remove('bg-yellow-400', 'border-black', 'font-bold');
+                btn.classList.add('bg-gray-100', 'border-gray-400');
+            });
+
+            // Alternar telas
+            document.getElementById('selection-grid-words').classList.remove('hidden');
+            document.getElementById('reveal-screen-words').classList.add('hidden');
+            document.getElementById('reveal-screen-words').classList.remove('flex');
+            
+            document.getElementById('btn-reveal-words').classList.remove('hidden');
+            document.getElementById('btn-reset-words').classList.add('hidden');
+
+            document.getElementById('status-message-words').innerHTML = 'Selecione exatamente 2 palavras (<span id="count-words">0</span>/2)';
+            updateWordGameUI();
+        }
+
     </script>
 </body>
 </html>
