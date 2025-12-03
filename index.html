@@ -334,48 +334,64 @@
 
         // === WAKE LOCK (Manter tela ativa) ===
         let wakeLock = null;
+        let wakeLockEnabled = true; // Nova flag para evitar spam de erros
 
         async function requestWakeLock() {
+            if (wakeLock || !wakeLockEnabled) return; 
+
             try {
                 if ('wakeLock' in navigator) {
                     wakeLock = await navigator.wakeLock.request('screen');
-                    console.log('Wake Lock is active');
+                    console.log('Wake Lock ativo: Tela não desligará.');
                     
                     wakeLock.addEventListener('release', () => {
-                        console.log('Wake Lock has been released');
+                        console.log('Wake Lock liberado (tela pode desligar).');
+                        wakeLock = null; 
                     });
                 }
             } catch (err) {
-                console.error(`${err.name}, ${err.message}`);
+                // Se for proibido pela política (iframe), desativamos a tentativa
+                if (err.name === 'NotAllowedError') {
+                     console.warn('Wake Lock desativado: Bloqueado pela política de permissões do navegador.');
+                     wakeLockEnabled = false; // Para de tentar
+                } else {
+                     // Outros erros apenas logamos info
+                     console.log(`Não foi possível ativar Wake Lock: ${err.name}, ${err.message}`);
+                }
             }
         }
 
-        // Recuperar o wake lock se a página ficar visível novamente
+        // Recuperar o wake lock se a página ficar visível novamente OU se houver clique
         document.addEventListener('visibilitychange', async () => {
-            if (wakeLock !== null && document.visibilityState === 'visible') {
+            if (wakeLock === null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        // Tenta ativar o Wake Lock em qualquer clique na página (Fallback para garantir)
+        document.addEventListener('click', async () => {
+            if (wakeLock === null && document.visibilityState === 'visible') {
                 await requestWakeLock();
             }
         });
 
         // === TELA INICIAL (SPLASH) ===
-        async function startGame() {
-            // Tenta ativar o Wake Lock ao iniciar
-            await requestWakeLock();
-
+        function startGame() {
+            // 1. Inicia a transição visual IMEDIATAMENTE (sem esperar o wake lock)
             const splash = document.getElementById('splash-screen');
             const mainContainer = document.getElementById('main-game-container');
             
-            // Adiciona classe de fade-out
             splash.classList.add('fade-out');
             
-            // Revela o jogo suavemente
             mainContainer.classList.remove('opacity-0');
             mainContainer.classList.add('opacity-100');
 
-            // Remove a splash screen do DOM após a transição
             setTimeout(() => {
                 splash.style.display = 'none';
             }, 800);
+
+            // 2. Tenta ativar o Wake Lock em segundo plano
+            requestWakeLock();
         }
 
         // === CONTROLE DE MODO (Abas) ===
@@ -496,7 +512,10 @@
                 const btn = document.createElement('button');
                 btn.className = 'word-btn text-xs md:text-sm p-2 border border-gray-400 bg-gray-100 hover:bg-yellow-100 font-mono transition-colors truncate';
                 btn.innerText = word;
-                btn.onclick = () => toggleWordSelection(word, btn);
+                btn.onclick = (e) => {
+                    e.stopPropagation(); // Evita conflito com o clique global do wake lock
+                    toggleWordSelection(word, btn);
+                };
                 btn.id = `word-btn-${index}`;
                 container.appendChild(btn);
             });
