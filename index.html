@@ -3,626 +3,782 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arquivo Morto - Evidência</title>
+    <title>Arquivo Morto - O Jogo</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
     <style>
-        /* Estilos Personalizados para o tema Investigação */
-        body {
-            font-family: 'Courier Prime', monospace;
-            background-color: #1a1a1a;
-            color: #e5e5e5;
-            overflow-x: hidden;
-        }
-
-        .title-font {
-            font-family: 'Special Elite', cursive;
-        }
-
-        /* Efeito de papel velho/textura */
+        /* TEMA NOIR / INVESTIGAÇÃO */
+        body { font-family: 'Courier Prime', monospace; background-color: #111; color: #eee; overflow-x: hidden; }
+        .title-font { font-family: 'Special Elite', cursive; }
+        
+        /* Textura de Papel */
         .paper-texture {
-            background-color: #f0f0f0;
-            background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9)),
-                url('https://www.transparenttextures.com/patterns/aged-paper.png');
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            background-color: #e3e3e3;
+            background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png');
+            color: #1a1a1a;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
         }
 
-        /* Efeito de fita de cena de crime */
-        .crime-tape {
-            background: repeating-linear-gradient(
-                45deg,
-                #fbbf24,
-                #fbbf24 10px,
-                #000 10px,
-                #000 20px
-            );
+        /* Cartas */
+        .card-frame {
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
         }
-
-        /* Animação de carimbo */
-        .stamp-animate {
-            animation: stamp-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            opacity: 0;
-            transform: scale(3) rotate(-15deg);
+        .card-frame:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            z-index: 10;
         }
-
-        @keyframes stamp-in {
-            to {
-                opacity: 1;
-                transform: scale(1) rotate(-15deg);
-            }
-        }
-
-        /* Background placeholder */
-        .bg-investigation {
-            background-color: #000000;
-            background-image: url('https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/fundo-site.png?raw=true');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-        }
-
-        /* Animação de piscar para as palavras selecionadas */
-        @keyframes blink-alert {
-            0%, 100% { opacity: 1; text-shadow: 0 0 10px rgba(255, 0, 0, 0.5); }
-            50% { opacity: 0.4; text-shadow: none; }
+        .card-selected {
+            border: 4px solid #b91c1c; /* Red border */
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(185, 28, 28, 0.6);
         }
         
-        .blinking-text {
-            animation: blink-alert 1.5s infinite;
+        /* Botões e Inputs */
+        input:focus { outline: none; border-color: #b91c1c; }
+        
+        /* Animações */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        
+        .stamp {
+            border: 3px solid #b91c1c;
+            color: #b91c1c;
+            padding: 0.5rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            font-family: 'Special Elite', cursive;
+            letter-spacing: 2px;
+            transform: rotate(-5deg);
+            display: inline-block;
         }
 
-        /* Animação de piscar forte (PULSE) para o logo na tela inicial */
-        @keyframes strong-pulse {
-            0%, 100% { 
-                opacity: 1; 
-                transform: scale(1); 
-                filter: drop-shadow(0 0 15px rgba(200, 0, 0, 0.5));
-            }
-            50% { 
-                opacity: 0.2; /* Opacidade bem baixa para parecer que está piscando */
-                transform: scale(0.95); 
-                filter: drop-shadow(0 0 0 rgba(0,0,0,0));
-            }
-        }
-
-        .logo-breath {
-            animation: strong-pulse 1.5s ease-in-out infinite;
-        }
-
-        /* Animação de Giro da Carta */
-        @keyframes spin-card {
-            0% { transform: rotateY(0deg) scale(1); }
-            50% { transform: rotateY(900deg) scale(1.1); }
-            100% { transform: rotateY(1800deg) scale(1); }
-        }
-
-        .card-spinning {
-            animation: spin-card 3s ease-out forwards;
-            pointer-events: none; 
-        }
-
-        .perspective-container {
-            perspective: 1000px;
-        }
-
-        /* Transição suave para esconder a tela inicial */
-        .fade-out {
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.8s ease-out;
-        }
-
-        /* Scrollbar customizada */
-        .word-list-container::-webkit-scrollbar { width: 8px; }
-        .word-list-container::-webkit-scrollbar-track { background: #e5e5e5; }
-        .word-list-container::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #333; }
+        ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
     </style>
 </head>
-<body class="bg-investigation min-h-screen flex flex-col items-center justify-start p-4">
+<body class="min-h-screen flex flex-col items-center p-4 bg-[url('https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/fundo-site.png?raw=true')] bg-cover bg-fixed bg-center">
+    
+    <!-- OVERLAY ESCURO PARA LEGIBILIDADE -->
+    <div class="fixed inset-0 bg-black/80 z-[-1]"></div>
 
-    <!-- ÁUDIO DE FUNDO -->
+    <!-- ÁUDIO -->
     <audio id="bg-music" loop>
         <source src="https://files.catbox.moe/tni4fx.mp3" type="audio/mpeg">
     </audio>
-
-    <!-- BOTÃO DE SOM -->
-    <button id="audio-toggle" class="fixed top-4 right-4 z-[60] p-3 bg-black/80 text-red-600 border border-red-800 rounded-full hover:bg-red-900/50 transition-all shadow-lg backdrop-blur-sm group">
-        <svg id="icon-sound-on" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-        </svg>
-        <svg id="icon-sound-off" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-        </svg>
+    <button onclick="toggleAudio()" class="fixed top-4 right-4 z-50 p-2 bg-black/50 text-white rounded-full border border-gray-600 hover:bg-red-900/50">
+        🔊/🔇
     </button>
 
-    <!-- TELA INICIAL (Splash Screen) -->
-    <div id="splash-screen" class="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center p-4">
-        <div class="absolute inset-0 bg-investigation opacity-50"></div>
-        <div class="absolute inset-0 bg-black opacity-60"></div>
+    <!-- HEADER -->
+    <header class="w-full max-w-5xl flex flex-col items-center mb-4 mt-2">
+        <img src="https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/logo-site.png?raw=true" class="h-24 md:h-32 object-contain drop-shadow-lg mb-2">
+        <div class="text-xs text-gray-500 tracking-[0.3em]">DEPARTAMENTO DE CASOS FRIOS</div>
+    </header>
 
-        <div class="relative z-10 flex flex-col items-center text-center">
-            <img src="https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/logo-site.png?raw=true" 
-                 alt="Arquivo Morto Logo" 
-                 class="h-48 md:h-64 object-contain mb-8 logo-breath drop-shadow-2xl">
-            
-            <div class="text-gray-400 text-sm tracking-[0.2em] mb-12 font-bold uppercase">
-                Acesso Restrito // Departamento de Casos Frios
-            </div>
-
-            <button id="btn-start-game" class="group relative px-8 py-4 bg-transparent border-2 border-red-800 text-red-600 font-bold text-xl uppercase tracking-widest hover:bg-red-900/20 hover:text-red-500 hover:border-red-600 transition-all duration-300">
-                <span class="absolute inset-0 w-full h-full bg-red-800/10 opacity-0 group-hover:opacity-100 transition-opacity"></span>
-                <span class="relative flex items-center gap-2">
-                    <span class="w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
-                    Iniciar Investigação
-                </span>
-            </button>
-            <p id="loading-msg" class="text-white mt-4 text-xs animate-pulse">Estabelecendo conexão segura...</p>
-        </div>
-        <div class="absolute bottom-8 text-gray-600 text-xs font-mono">
-            SISTEMA ONLINE v3.0 | <span id="online-count">1</span> AGENTES CONECTADOS
-        </div>
-    </div>
-
-    <!-- Container Principal -->
-    <div id="main-game-container" class="paper-texture text-gray-900 w-full max-w-4xl rounded-sm p-2 relative mt-4 mb-8 border-t-8 border-yellow-700 shadow-2xl transition-opacity duration-1000 opacity-0">
+    <!-- ÁREA PRINCIPAL DO JOGO -->
+    <main id="game-app" class="w-full max-w-5xl min-h-[600px] relative">
         
-        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2 w-32 h-8 bg-gray-400 rounded-t-lg opacity-80 shadow-md"></div>
+        <!-- TELA 1: LOGIN -->
+        <div id="screen-login" class="paper-texture max-w-md mx-auto p-8 rounded shadow-2xl mt-10 text-center fade-in">
+            <h2 class="text-2xl title-font mb-6 border-b-2 border-gray-800 pb-2">Identificação</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2 text-left">NOME DO AGENTE:</label>
+                <input type="text" id="player-name-input" class="w-full bg-gray-200 border-2 border-gray-400 p-3 font-mono text-lg uppercase" placeholder="Digite seu nome...">
+            </div>
+            <button onclick="joinGame()" class="w-full bg-gray-900 text-white py-3 font-bold tracking-widest hover:bg-red-900 transition-colors border-2 border-black">
+                ENTRAR NO CASO
+            </button>
+            <p id="login-error" class="text-red-600 text-xs mt-2 hidden">Preencha o nome corretamente.</p>
+        </div>
 
-        <div class="border-2 border-gray-400 border-dashed p-4 md:p-6 h-full flex flex-col items-center min-h-[600px]">
+        <!-- TELA 2: LOBBY -->
+        <div id="screen-lobby" class="hidden paper-texture w-full p-6 rounded shadow-2xl fade-in flex flex-col md:flex-row gap-6">
+            <!-- Lista de Jogadores -->
+            <div class="flex-1">
+                <h2 class="text-2xl title-font mb-4 flex items-center gap-2">
+                    <span class="stamp text-sm rotate-0 border-2">AGUARDANDO</span>
+                    Agentes na Sala
+                </h2>
+                <ul id="lobby-player-list" class="space-y-2 font-mono text-lg border-2 border-dashed border-gray-400 p-4 min-h-[200px]">
+                    <!-- Lista injetada via JS -->
+                    <li class="text-gray-500 italic">Aguardando conexão...</li>
+                </ul>
+            </div>
             
-            <!-- Cabeçalho -->
-            <header class="w-full flex flex-col items-center mb-6 border-b-2 border-gray-800 pb-4">
-                <img id="game-logo" src="https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/logo-site.png?raw=true" alt="Arquivo Morto Logo" class="h-24 md:h-32 object-contain mb-2 drop-shadow-sm" onerror="this.style.display='none'; document.getElementById('text-logo').classList.remove('hidden');">
-                <div id="text-logo" class="text-center hidden">
-                    <h1 class="text-4xl title-font font-bold uppercase tracking-widest text-red-900">Arquivo Morto</h1>
+            <!-- Controles do Lobby -->
+            <div class="w-full md:w-1/3 flex flex-col justify-center border-l-2 border-gray-400 pl-6 border-dashed">
+                <div class="bg-yellow-100 p-4 border border-yellow-300 mb-6 text-sm">
+                    <strong>INSTRUÇÕES:</strong><br>
+                    Aguarde os jogadores (4 a 8).<br>
+                    O primeiro a atingir <strong>40 Pontos</strong> vence.<br>
+                    Qualquer um pode iniciar.
                 </div>
+                <button onclick="requestStartGame()" class="w-full bg-red-900 text-white py-4 font-bold text-xl tracking-widest hover:bg-red-800 shadow-lg border-2 border-black">
+                    INICIAR MISSÃO
+                </button>
+            </div>
+        </div>
 
-                <!-- Menu de Navegação -->
-                <div class="flex flex-wrap gap-2 md:gap-4 mt-4 w-full justify-center">
-                    <button id="nav-numbers" class="px-4 py-2 bg-gray-300 text-gray-700 text-xs md:text-sm font-bold uppercase tracking-wider border-b-4 border-gray-400 transition-all">
-                        1. Evidência Numérica
-                    </button>
-                    <button id="nav-cards" class="px-4 py-2 bg-gray-300 text-gray-700 text-xs md:text-sm font-bold uppercase tracking-wider border-b-4 border-gray-400 transition-all">
-                        2. Cartas
-                    </button>
-                    <button id="nav-words" class="px-4 py-2 bg-gray-300 text-gray-700 text-xs md:text-sm font-bold uppercase tracking-wider border-b-4 border-gray-400 transition-all">
-                        3. Palavras
-                    </button>
+        <!-- TELA 3: JOGO (TABULEIRO) -->
+        <div id="screen-game" class="hidden w-full flex flex-col gap-4 fade-in">
+            
+            <!-- BARRA DE STATUS SUPERIOR -->
+            <div class="paper-texture p-3 flex justify-between items-center rounded border-b-4 border-red-900">
+                <div>
+                    <span class="text-xs text-gray-500 block">TESTEMUNHA ATUAL</span>
+                    <span id="current-witness-name" class="text-xl font-bold title-font text-red-900">...</span>
                 </div>
-            </header>
+                <div class="text-center">
+                    <span class="text-xs text-gray-500 block">FASE</span>
+                    <span id="game-phase-display" class="font-bold bg-black text-white px-3 py-1 text-sm rounded">...</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-gray-500 block">SEUS PONTOS</span>
+                    <span id="my-score" class="text-2xl font-bold title-font">0</span>
+                    <span class="text-[10px] text-gray-600">/ 40</span>
+                </div>
+            </div>
 
-            <!-- MODO 1: NÚMEROS -->
-            <div id="mode-numbers" class="hidden w-full flex flex-col items-center flex-grow">
-                <div id="status-message-num" class="mb-6 h-8 text-center font-bold text-lg text-slate-800">Selecione uma evidência numérica.</div>
+            <!-- ÁREA DE EVIDÊNCIAS (PALAVRAS) - Visível sempre que houver palavras -->
+            <div id="evidence-display" class="hidden paper-texture p-4 text-center border-2 border-gray-800 relative">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-black text-white px-2 text-xs uppercase tracking-widest">Pistas da Testemunha</div>
+                <div class="flex justify-center gap-4 md:gap-8 items-center mt-2">
+                    <div id="evidence-1" class="text-xl md:text-3xl font-bold title-font border-b-2 border-red-500">?</div>
+                    <div class="text-gray-400 text-lg">&</div>
+                    <div id="evidence-2" class="text-xl md:text-3xl font-bold title-font border-b-2 border-red-500">?</div>
+                </div>
+            </div>
+
+            <!-- ÁREA CENTRAL DE AÇÃO (Muda conforme a fase) -->
+            <div id="action-area" class="flex-grow min-h-[400px] flex flex-col relative">
                 
-                <!-- Grid de Seleção -->
-                <div id="selection-grid-num" class="grid grid-cols-3 gap-4 mb-8 w-full max-w-md">
-                    <!-- Gerado via JS -->
-                </div>
-
-                <!-- Oculto -->
-                <div id="hidden-screen-num" class="hidden w-full max-w-md h-64 border-4 border-double border-red-900 flex items-center justify-center relative bg-gray-200 mb-8">
-                    <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/diagmonds-light.png')]"></div>
-                    <div class="stamp-animate border-4 border-red-800 text-red-800 p-2 font-bold text-2xl uppercase tracking-widest title-font opacity-0 transform scale-150 rotate-[-15deg]">Confidencial</div>
-                </div>
-
-                <!-- Revelado -->
-                <div id="reveal-screen-num" class="hidden w-full max-w-md h-64 flex flex-col items-center justify-center mb-8 relative">
-                    <p class="text-sm uppercase tracking-widest mb-2">A evidência selecionada foi:</p>
-                    <div class="w-32 h-32 bg-yellow-400 text-black border-4 border-black flex items-center justify-center shadow-lg transform rotate-2">
-                        <span id="final-number" class="text-6xl font-bold title-font">?</span>
+                <!-- CONTAINER DE MENSAGENS / WAIT -->
+                <div id="msg-container" class="absolute inset-0 flex items-center justify-center bg-black/50 z-20 hidden text-center p-4">
+                    <div class="bg-white p-6 rounded shadow-xl max-w-md border-4 border-gray-800">
+                        <h3 id="msg-title" class="text-xl font-bold mb-2">Aguarde...</h3>
+                        <p id="msg-body" class="text-gray-600">Outros agentes estão analisando as evidências.</p>
+                        <div class="mt-4 animate-pulse text-red-800 font-mono">ENCRIPTANDO DADOS...</div>
                     </div>
-                    <div class="mt-4 w-full h-4 crime-tape"></div>
                 </div>
 
-                <!-- Controles -->
-                <div class="flex flex-wrap gap-4 justify-center w-full mt-auto">
-                    <button id="btn-hide-num" class="px-6 py-3 bg-gray-800 text-white font-bold tracking-wider hover:bg-gray-700 border-b-4 border-gray-950 active:border-b-0 active:translate-y-1">OCULTAR</button>
-                    <button id="btn-reveal-num" class="hidden px-6 py-3 bg-red-800 text-white font-bold tracking-wider hover:bg-red-700 border-b-4 border-red-950 active:border-b-0 active:translate-y-1 animate-pulse">MOSTRAR</button>
-                    <button id="btn-reset-num" class="px-6 py-3 bg-yellow-600 text-white font-bold tracking-wider hover:bg-yellow-500 border-b-4 border-yellow-800 active:border-b-0 active:translate-y-1">RESTAURAR</button>
+                <!-- ÁREA: SELEÇÃO DE CARTAS (Mão do Jogador) -->
+                <div id="hand-area" class="hidden">
+                    <h3 class="text-white text-center mb-2 text-sm tracking-widest uppercase bg-black/50 p-1">Sua Mão (Selecione <span id="hand-instruction">uma carta</span>)</h3>
+                    <div id="my-hand-grid" class="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-4 p-2 overflow-x-auto">
+                        <!-- Cartas geradas via JS -->
+                    </div>
                 </div>
+
+                <!-- ÁREA: SELEÇÃO DE PALAVRAS (Só para Testemunha) -->
+                <div id="word-selection-area" class="hidden paper-texture p-4 mt-2">
+                    <h3 class="text-center font-bold mb-2">SELECIONE 2 PALAVRAS DO ARQUIVO</h3>
+                    <div id="word-grid" class="grid grid-cols-3 md:grid-cols-5 gap-2 max-h-[200px] overflow-y-auto p-2 border border-gray-400">
+                        <!-- Palavras geradas via JS -->
+                    </div>
+                    <button onclick="confirmWitnessPlay()" id="btn-confirm-witness" disabled class="w-full mt-4 bg-red-900 text-white py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+                        CONFIRMAR EVIDÊNCIAS
+                    </button>
+                </div>
+
+                <!-- ÁREA: MESA DE VOTAÇÃO (Cartas jogadas) -->
+                <div id="voting-table" class="hidden p-4">
+                    <h3 class="text-white text-center mb-4 text-xl title-font bg-red-900/80 p-2 rounded">QUEM É A TESTEMUNHA? (VOTE)</h3>
+                    <div id="table-cards-grid" class="flex flex-wrap justify-center gap-4">
+                        <!-- Cartas da mesa -->
+                    </div>
+                </div>
+
+                <!-- ÁREA: PLACAR (Fim do Round) -->
+                <div id="scoring-board" class="hidden paper-texture p-6 m-auto max-w-2xl w-full border-4 border-double border-gray-800">
+                    <h2 class="text-3xl title-font text-center mb-6">RELATÓRIO DO TURNO</h2>
+                    
+                    <div id="round-results" class="mb-6 space-y-2 font-mono text-sm border-b border-gray-400 pb-4">
+                        <!-- Resultados detalhados -->
+                    </div>
+
+                    <h3 class="font-bold mb-2">PLACAR GERAL:</h3>
+                    <ul id="scoreboard-list" class="space-y-1 mb-8">
+                        <!-- Placar -->
+                    </ul>
+
+                    <button onclick="startNextRound()" class="w-full bg-gray-800 text-white py-3 font-bold hover:bg-gray-700">
+                        PRÓXIMO ARQUIVO >>
+                    </button>
+                </div>
+
+                <!-- ÁREA: FIM DE JOGO -->
+                <div id="game-over-screen" class="hidden paper-texture p-8 m-auto max-w-2xl w-full border-8 border-red-900 shadow-2xl text-center transform rotate-1">
+                    <h1 class="text-5xl title-font text-red-900 mb-2">CASO ENCERRADO</h1>
+                    <div class="text-xl font-bold mb-8">O ARQUIVO FOI SOLUCIONADO</div>
+                    
+                    <div class="bg-black text-white p-6 mb-8 rounded shadow-lg">
+                        <p class="text-sm uppercase tracking-widest text-gray-400 mb-2">Melhor Investigador</p>
+                        <div id="winner-name" class="text-4xl font-bold text-yellow-500 mb-2">AGENTE X</div>
+                        <div id="winner-score" class="text-xl">0 Pontos</div>
+                    </div>
+
+                    <button onclick="resetGameData()" class="px-8 py-4 bg-red-900 text-white font-bold text-lg hover:bg-red-800 border-2 border-black">
+                        NOVO CASO (REINICIAR)
+                    </button>
+                </div>
+
             </div>
-
-            <!-- MODO 2: CARTAS -->
-            <div id="mode-cards" class="hidden w-full flex flex-col items-center flex-grow perspective-container">
-                <div id="status-message-cards" class="mb-4 h-8 text-center font-bold text-lg text-slate-800">Arquivo de Imagens: Solicitar análise.</div>
-                <div class="flex-grow flex items-center justify-center w-full mb-6">
-                    <div class="relative w-64 h-96 bg-gray-200 border-4 border-gray-800 shadow-2xl rounded-lg p-2 bg-white flex items-center justify-center overflow-hidden">
-                        <img id="card-display" src="https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/verso.png?raw=true" class="w-full h-full object-cover rounded shadow-inner">
-                    </div>
-                </div>
-                <div class="flex flex-wrap gap-4 justify-center w-full mt-auto">
-                    <button id="btn-draw-card" class="px-8 py-4 bg-gray-800 text-white font-bold text-xl tracking-widest hover:bg-gray-700 transition-colors border-b-4 border-gray-950 active:border-b-0 active:translate-y-1 shadow-lg">INVESTIGAR ARQUIVO</button>
-                </div>
-            </div>
-
-            <!-- MODO 3: PALAVRAS -->
-            <div id="mode-words" class="hidden w-full flex flex-col items-center flex-grow">
-                <div id="status-message-words" class="mb-4 h-8 text-center font-bold text-lg text-slate-800">Selecione exatamente 2 palavras (<span id="count-words">0</span>/2)</div>
-                <div id="selection-grid-words" class="w-full max-w-3xl word-list-container overflow-y-auto max-h-[400px] border border-gray-400 p-2 bg-white bg-opacity-50 mb-6">
-                    <div id="words-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2"></div>
-                </div>
-                <div id="reveal-screen-words" class="hidden w-full flex-grow flex flex-col items-center justify-center relative min-h-[300px]">
-                    <div class="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
-                        <span class="text-9xl font-bold text-red-900 rotate-[-30deg]">CONFIDENCIAL</span>
-                    </div>
-                    <div class="flex flex-col md:flex-row gap-8 items-center justify-center z-10 w-full">
-                        <div class="bg-black text-white p-6 border-4 border-red-600 transform -rotate-2 shadow-2xl w-full md:w-5/12 text-center">
-                            <span id="final-word-1" class="text-3xl md:text-4xl lg:text-5xl font-bold title-font blinking-text break-words"></span>
-                        </div>
-                        <div class="text-2xl font-bold text-gray-800">+</div>
-                        <div class="bg-black text-white p-6 border-4 border-red-600 transform rotate-2 shadow-2xl w-full md:w-5/12 text-center">
-                            <span id="final-word-2" class="text-3xl md:text-4xl lg:text-5xl font-bold title-font blinking-text break-words"></span>
-                        </div>
-                    </div>
-                    <div class="mt-12 w-full h-8 crime-tape"></div>
-                </div>
-                <div class="flex flex-wrap gap-4 justify-center w-full mt-auto">
-                    <button id="btn-reveal-words" class="px-8 py-4 bg-red-900 text-white font-bold text-xl tracking-widest hover:bg-red-800 border-b-4 border-black active:border-b-0 active:translate-y-1 disabled:opacity-40 disabled:cursor-not-allowed">REVELAR SELEÇÃO</button>
-                    <button id="btn-reset-words" class="hidden px-6 py-3 bg-yellow-600 text-white font-bold tracking-wider hover:bg-yellow-500 border-b-4 border-yellow-800 active:border-b-0 active:translate-y-1">NOVA SELEÇÃO</button>
-                </div>
-            </div>
-
         </div>
-        <div class="text-center mt-2 text-xs text-gray-500 font-mono">
-            SISTEMA INTEGRADO DE ARQUIVO MORTO v3.1 (Multi-Agente)
-        </div>
-    </div>
 
-    <!-- Módulo JS (Firebase + Lógica) -->
+    </main>
+
+    <!-- Módulo JS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // === CONFIGURAÇÃO FIREBASE ===
-        const firebaseConfig = JSON.parse(__firebase_config);
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbddYCH65EHCTRluFHe4FOE6J5z9yBLxw",
+            authDomain: "jogo-arquivo-morto.firebaseapp.com",
+            projectId: "jogo-arquivo-morto",
+            storageBucket: "jogo-arquivo-morto.firebasestorage.app",
+            messagingSenderId: "24019872660",
+            appId: "1:24019872660:web:bda2b9dacc0530f48b7d81"
+        };
+
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = __app_id || 'default-app-id';
         
-        // CORREÇÃO: Adicionando 'main' ao final para garantir número par de segmentos (6)
-        // Caminho: artifacts/{appId}/public/data/gamestate_v1/main
-        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'gamestate_v1', 'main');
+        // Caminho do Jogo CORRIGIDO (Adicionado 'data' para ter 6 segmentos)
+        const GAME_ID = 'sessao_jogo_v4';
+        const docRef = doc(db, 'artifacts', 'jogo-arquivo-morto', 'public', 'data', 'gamestate', GAME_ID);
 
-        let currentUser = null;
-        let isSpinningLocal = false; // Controle local para animação
+        // VARIÁVEIS LOCAIS
+        let myId = null;
+        let myName = "";
+        let localState = null;
+        let selectedWords = [];
+        let selectedCard = null;
 
-        // === ESTADO PADRÃO ===
-        const defaultState = {
-            mode: 'numbers', // numbers, cards, words
-            
-            // Números
-            numSelected: null,
-            numHidden: false,
-            numRevealed: false,
-            
-            // Cartas
-            cardSrc: "https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/verso.png?raw=true",
-            cardSpinning: false,
-            
-            // Palavras
-            wordsSelected: [],
-            wordsRevealed: false,
-
-            // Metadados
-            playersOnline: 0,
-            lastUpdate: Date.now()
-        };
+        const TOTAL_CARDS = 60;
+        const WINNING_SCORE = 40;
+        const WORDS_LIST = [
+            "Chuva", "Nevoeiro", "Sombra", "Luz", "Ruído", "Silêncio", "Frio", "Calor", "Poeira", "Cinza", "Ecos", "Escuridão", "Reflexo", "Vazio", "Cheiro",
+            "Sangue", "Vidro", "Metal", "Ferrugem", "Papel", "Chave", "Fio", "Relógio", "Espelho", "Máquina", "Faca", "Veneno", "Dinheiro", "Carta", "Telefone",
+            "Verdade", "Mentira", "Segredo", "Culpa", "Inocência", "Tempo", "Passado", "Futuro", "Destino", "Acaso", "Lei", "Caos", "Poder", "Sonho", "Pesadelo",
+            "Medo", "Raiva", "Desejo", "Vingança", "Fuga", "Busca", "Perda", "Espera", "Queda", "Olhar", "Toque", "Grito", "Sussurro", "Solidão", "Loucura",
+            "Vítima", "Assassino", "Testemunha", "Criança", "Velho", "Mulher", "Homem", "Casa", "Rua", "Prisão", "Hospital", "Floresta", "Mar", "Ponte", "Janela",
+            "Início", "Fim", "Sempre", "Nunca", "Talvez", "Antes", "Depois", "Dentro", "Fora", "Alto", "Baixo", "Rápido", "Lento", "Tudo", "Nada"
+        ];
 
         // === INICIALIZAÇÃO ===
         async function init() {
             try {
-                const userCred = await signInAnonymously(auth);
-                currentUser = userCred.user;
-                console.log("Conectado como:", currentUser.uid);
-                
-                document.getElementById('loading-msg').innerText = "Conexão Estabelecida.";
-                document.getElementById('btn-start-game').onclick = startGame;
-
-                // Escuta mudanças no Firestore
-                onSnapshot(docRef, (snap) => {
-                    if (snap.exists()) {
-                        updateUI(snap.data());
-                    } else {
-                        // Se não existe, cria
-                        setDoc(docRef, defaultState);
+                await signInAnonymously(auth);
+                auth.onAuthStateChanged(user => {
+                    if(user) {
+                        myId = user.uid;
+                        // Escutar o jogo
+                        onSnapshot(docRef, (snap) => {
+                            if (snap.exists()) {
+                                localState = snap.data();
+                                renderGame(localState);
+                            } else {
+                                // Criar estado inicial se não existir
+                                // Para novos jogadores que entrarem antes do reset ser feito
+                            }
+                        });
                     }
                 });
-
             } catch (error) {
                 console.error("Erro na conexão:", error);
-                document.getElementById('loading-msg').innerText = "Erro ao conectar. Tente recarregar.";
+                alert("Erro ao conectar no banco de dados. Verifique a configuração.");
             }
         }
         init();
 
-        // === FUNÇÕES DE UI (ATUALIZAÇÃO VISUAL) ===
-        function updateUI(state) {
-            // Atualiza contador online (fake random + base para sensação de movimento se quiser, ou fixo)
-            // Firebase não tem "presence" nativa simples no Firestore sem Realtime DB, 
-            // então vamos manter simples ou usar um campo incrementado (complexo para lidar com desconexão).
-            // Por simplicidade, assumimos que quem está recebendo updates está online.
+        // === LÓGICA DE LOGIN E LOBBY ===
+        window.joinGame = async () => {
+            const nameInput = document.getElementById('player-name-input');
+            const name = nameInput.value.trim().toUpperCase();
+            if (!name) return;
+
+            myName = name;
             
-            // 1. Abas
-            switchTabUI(state.mode);
+            // Adicionar jogador ao Firestore
+            const newPlayer = {
+                id: myId,
+                name: name,
+                score: 0,
+                hand: drawCards(6) // Dá 6 cartas iniciais
+            };
 
-            // 2. Números
-            updateNumbersUI(state);
+            // Pega estado atual para adicionar player
+            const snap = await getDoc(docRef);
+            if(snap.exists()) {
+                const data = snap.data();
+                // Verifica se já está na lista (pelo ID)
+                const existing = data.players.find(p => p.id === myId);
+                if (!existing) {
+                    const updatedPlayers = [...data.players, newPlayer];
+                    await updateDoc(docRef, { players: updatedPlayers });
+                }
+            } else {
+                // Cria se não existir
+                await setDoc(docRef, {
+                    phase: 'lobby',
+                    players: [newPlayer],
+                    roundCount: 0,
+                    witnessIndex: 0
+                });
+            }
 
-            // 3. Cartas
-            updateCardsUI(state);
+            // UI Switch
+            document.getElementById('screen-login').classList.add('hidden');
+            document.getElementById('screen-lobby').classList.remove('hidden');
+        };
 
-            // 4. Palavras
-            updateWordsUI(state);
-        }
+        window.requestStartGame = async () => {
+            if (!localState || localState.players.length < 2) {
+                alert("Atenção: Para uma melhor experiência, recomendamos pelo menos 3 agentes.");
+            }
+            
+            // Configurar Round 1
+            await updateDoc(docRef, {
+                phase: 'witness_setup',
+                witnessIndex: 0, // Primeiro jogador é testemunha
+                roundCount: 1,
+                currentWords: [],
+                tableCards: [], // Cartas jogadas na mesa
+                votes: {}, // Votos
+                playedThisRound: [] // IDs de quem já jogou carta
+            });
+        };
 
-        function switchTabUI(mode) {
-            ['numbers', 'cards', 'words'].forEach(m => {
-                const section = document.getElementById(`mode-${m}`);
-                const btn = document.getElementById(`nav-${m}`);
+        // === RENDERIZAÇÃO PRINCIPAL ===
+        function renderGame(state) {
+            // 1. LOBBY
+            if (state.phase === 'lobby') {
+                const list = document.getElementById('lobby-player-list');
+                list.innerHTML = state.players.map(p => `<li>👮 ${p.name} ${p.id === myId ? '(VOCÊ)' : ''}</li>`).join('');
+                return; // Para aqui se for lobby
+            }
+
+            // Se o jogo começou e eu ainda estou na tela de login/lobby
+            document.getElementById('screen-login').classList.add('hidden');
+            document.getElementById('screen-lobby').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+
+            // --- HEADER INFO ---
+            const witness = state.players[state.witnessIndex];
+            document.getElementById('current-witness-name').innerText = witness ? witness.name : "Ninguém";
+            
+            const me = state.players.find(p => p.id === myId);
+            if(me) document.getElementById('my-score').innerText = me.score;
+
+            const isWitness = (witness && myId === witness.id);
+
+            // --- FASES DO JOGO ---
+            const phaseDisplay = document.getElementById('game-phase-display');
+            const handArea = document.getElementById('hand-area');
+            const wordArea = document.getElementById('word-selection-area');
+            const msgContainer = document.getElementById('msg-container');
+            const votingTable = document.getElementById('voting-table');
+            const scoringBoard = document.getElementById('scoring-board');
+            const evidenceDisplay = document.getElementById('evidence-display');
+            const gameOverScreen = document.getElementById('game-over-screen');
+
+            // Reset visibilidade
+            handArea.classList.add('hidden');
+            wordArea.classList.add('hidden');
+            msgContainer.classList.add('hidden');
+            votingTable.classList.add('hidden');
+            scoringBoard.classList.add('hidden');
+            evidenceDisplay.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+
+            // FIM DE JOGO
+            if (state.phase === 'game_over') {
+                phaseDisplay.innerText = "FIM";
+                gameOverScreen.classList.remove('hidden');
+                document.getElementById('action-area').classList.add('flex-col-reverse'); 
                 
-                if (m === mode) {
-                    section.classList.remove('hidden');
-                    btn.classList.remove('bg-gray-300', 'text-gray-700', 'border-gray-400');
-                    btn.classList.add('bg-gray-800', 'text-white', 'border-gray-950');
-                } else {
-                    section.classList.add('hidden');
-                    btn.classList.add('bg-gray-300', 'text-gray-700', 'border-gray-400');
-                    btn.classList.remove('bg-gray-800', 'text-white', 'border-gray-950');
+                if (state.winner) {
+                    document.getElementById('winner-name').innerText = state.winner.name;
+                    document.getElementById('winner-score').innerText = `${state.winner.score} Pontos`;
                 }
-            });
-        }
+                return;
+            }
 
-        function updateNumbersUI(state) {
-            const grid = document.getElementById('selection-grid-num');
-            const hiddenScreen = document.getElementById('hidden-screen-num');
-            const revealScreen = document.getElementById('reveal-screen-num');
-            const status = document.getElementById('status-message-num');
-            const btnHide = document.getElementById('btn-hide-num');
-            const btnReveal = document.getElementById('btn-reveal-num');
-            const btnReset = document.getElementById('btn-reset-num');
-
-            // Renderiza Grid se necessário
-            if (!grid.innerHTML) {
-                for (let i = 1; i <= 6; i++) {
-                    const btn = document.createElement('button');
-                    btn.className = "evidence-btn-num group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all focus:outline-none";
-                    btn.innerHTML = `<span class="absolute top-1 left-2 text-xs font-bold text-gray-500">EVIDÊNCIA</span><span class="text-4xl font-bold title-font group-hover:scale-110 transition-transform block">${i}</span>`;
-                    btn.onclick = () => updateState({ numSelected: i });
-                    grid.appendChild(btn);
+            // FASE 1: TESTEMUNHA ESCOLHE
+            if (state.phase === 'witness_setup') {
+                phaseDisplay.innerText = "DEPOIMENTO";
+                
+                if (isWitness) {
+                    // Testemunha vê mão e palavras
+                    handArea.classList.remove('hidden');
+                    document.getElementById('hand-instruction').innerText = "A CARTA SECRETA";
+                    wordArea.classList.remove('hidden');
+                    renderHand(me.hand, true); // true = selecionável
+                    renderWords();
+                } else {
+                    // Detetives esperam
+                    msgContainer.classList.remove('hidden');
+                    document.getElementById('msg-title').innerText = "Interrogatório em andamento";
+                    document.getElementById('msg-body').innerText = `${witness.name} está analisando os arquivos...`;
                 }
             }
 
-            // Atualiza seleção visual
-            const buttons = document.querySelectorAll('.evidence-btn-num');
-            buttons.forEach((btn, idx) => {
-                const num = idx + 1;
-                if (num === state.numSelected) {
-                    btn.className = "evidence-btn-num group relative h-24 bg-yellow-200 border-2 border-yellow-600 ring-2 ring-yellow-500 transition-all";
-                } else {
-                    btn.className = "evidence-btn-num group relative h-24 bg-gray-200 border-2 border-gray-800 hover:bg-gray-300 transition-all";
-                }
-            });
+            // FASE 2: DETETIVES JOGAM CARTA
+            else if (state.phase === 'detective_play') {
+                phaseDisplay.innerText = "INVESTIGAÇÃO";
+                evidenceDisplay.classList.remove('hidden');
+                document.getElementById('evidence-1').innerText = state.currentWords[0];
+                document.getElementById('evidence-2').innerText = state.currentWords[1];
 
-            // Lógica de Telas
-            if (state.numRevealed) {
-                grid.classList.add('hidden');
-                hiddenScreen.classList.add('hidden'); hiddenScreen.classList.remove('flex');
-                revealScreen.classList.remove('hidden'); revealScreen.classList.add('flex');
-                document.getElementById('final-number').innerText = state.numSelected;
-                btnHide.classList.add('hidden');
-                btnReveal.classList.add('hidden');
-                status.innerText = "CASO REABERTO: Evidência revelada.";
-            } else if (state.numHidden) {
-                grid.classList.add('hidden');
-                hiddenScreen.classList.remove('hidden'); hiddenScreen.classList.add('flex');
-                revealScreen.classList.add('hidden'); revealScreen.classList.remove('flex');
-                btnHide.classList.add('hidden');
-                btnReveal.classList.remove('hidden');
-                status.innerText = "Evidência arquivada. Aguardando revelação...";
-            } else {
-                grid.classList.remove('hidden');
-                hiddenScreen.classList.add('hidden'); hiddenScreen.classList.remove('flex');
-                revealScreen.classList.add('hidden'); revealScreen.classList.remove('flex');
-                btnHide.classList.remove('hidden');
-                btnReveal.classList.add('hidden');
-                status.innerText = state.numSelected ? `Evidência ${state.numSelected} selecionada.` : "Selecione uma evidência numérica.";
+                if (isWitness) {
+                    msgContainer.classList.remove('hidden');
+                    document.getElementById('msg-title').innerText = "Aguardando Evidências";
+                    document.getElementById('msg-body').innerText = "Os detetives estão escolhendo cartas falsas...";
+                } else {
+                    // Verifique se eu já joguei
+                    const alreadyPlayed = state.playedThisRound.includes(myId);
+                    
+                    if (alreadyPlayed) {
+                        msgContainer.classList.remove('hidden');
+                        document.getElementById('msg-title').innerText = "Evidência Enviada";
+                        document.getElementById('msg-body').innerText = "Aguardando os outros detetives.";
+                    } else {
+                        handArea.classList.remove('hidden');
+                        document.getElementById('hand-instruction').innerText = "UMA CARTA PARA CONFUNDIR";
+                        renderHand(me.hand, true);
+                    }
+                }
+            }
+
+            // FASE 3: VOTAÇÃO
+            else if (state.phase === 'voting') {
+                phaseDisplay.innerText = "VOTAÇÃO";
+                evidenceDisplay.classList.remove('hidden');
+                document.getElementById('evidence-1').innerText = state.currentWords[0];
+                document.getElementById('evidence-2').innerText = state.currentWords[1];
+                
+                votingTable.classList.remove('hidden');
+                
+                if (isWitness) {
+                    // Testemunha não vota, só assiste
+                    document.getElementById('msg-body').innerText = "Você não vota neste turno.";
+                    renderVotingTable(state.tableCards, false, null); // false = não clicável
+                } else {
+                    // Detetives votam
+                    const myVote = state.votes ? state.votes[myId] : null;
+                    if (myVote) {
+                        msgContainer.classList.remove('hidden');
+                        document.getElementById('msg-title').innerText = "Voto Registrado";
+                        document.getElementById('msg-body').innerText = "Aguardando apuração...";
+                    } else {
+                        // Renderiza mesa embaralhada
+                        const myCardId = state.tableCards.find(c => c.owner === myId)?.cardId;
+                        renderVotingTable(state.tableCards, true, myCardId);
+                    }
+                }
+            }
+
+            // FASE 4: PONTUAÇÃO
+            else if (state.phase === 'scoring') {
+                phaseDisplay.innerText = "RELATÓRIO";
+                evidenceDisplay.classList.remove('hidden');
+                scoringBoard.classList.remove('hidden');
+                renderScoreboard(state);
             }
         }
 
-        function updateCardsUI(state) {
-            const img = document.getElementById('card-display');
-            const btn = document.getElementById('btn-draw-card');
-            const status = document.getElementById('status-message-cards');
+        // === RENDERIZADORES ===
 
-            // Se o estado diz que está girando, aplica a classe
-            if (state.cardSpinning) {
-                if (!img.classList.contains('card-spinning')) {
-                    img.src = "https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/verso.png?raw=true";
-                    img.classList.add('card-spinning');
-                    btn.disabled = true;
-                    btn.classList.add('opacity-50', 'cursor-not-allowed');
-                    status.innerText = "Sincronizando banco de dados...";
+        function renderHand(cardIds, clickable) {
+            const grid = document.getElementById('my-hand-grid');
+            grid.innerHTML = '';
+            
+            cardIds.forEach(num => {
+                const url = `https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/${num}.png?raw=true`;
+                const div = document.createElement('div');
+                div.className = `card-frame rounded overflow-hidden aspect-[2/3] bg-gray-800 border-2 ${selectedCard === num ? 'card-selected' : 'border-gray-600'}`;
+                div.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+                
+                if (clickable) {
+                    div.onclick = () => {
+                        selectedCard = num;
+                        renderHand(cardIds, true);
+                        if (localState.phase === 'witness_setup') checkWitnessReady();
+                        if (localState.phase === 'detective_play') submitDetectiveCard(num);
+                    };
                 }
-            } else {
-                img.classList.remove('card-spinning');
-                if (state.cardSrc && img.src !== state.cardSrc) {
-                    img.src = state.cardSrc;
-                }
+                grid.appendChild(div);
+            });
+        }
+
+        function renderWords() {
+            const grid = document.getElementById('word-grid');
+            if (grid.children.length > 0) return;
+
+            WORDS_LIST.forEach(word => {
+                const btn = document.createElement('button');
+                btn.className = "text-xs p-1 bg-gray-200 hover:bg-yellow-200 border border-gray-400";
+                btn.innerText = word;
+                btn.onclick = () => {
+                    if (selectedWords.includes(word)) {
+                        selectedWords = selectedWords.filter(w => w !== word);
+                        btn.classList.remove('bg-red-800', 'text-white');
+                        btn.classList.add('bg-gray-200', 'text-black');
+                    } else if (selectedWords.length < 2) {
+                        selectedWords.push(word);
+                        btn.classList.remove('bg-gray-200', 'text-black');
+                        btn.classList.add('bg-red-800', 'text-white');
+                    }
+                    checkWitnessReady();
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function checkWitnessReady() {
+            const btn = document.getElementById('btn-confirm-witness');
+            if (selectedCard && selectedWords.length === 2) {
                 btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                
-                if (state.cardSrc.includes('verso.png')) {
-                    status.innerText = "Arquivo de Imagens: Solicitar análise.";
-                    btn.innerText = "INVESTIGAR ARQUIVO";
-                } else {
-                    status.innerText = "Arquivo recuperado.";
-                    btn.innerText = "INVESTIGAR NOVA CARTA";
-                }
+            } else {
+                btn.disabled = true;
             }
         }
 
-        function updateWordsUI(state) {
-            const container = document.getElementById('words-container');
-            
-            // Renderiza Grid se vazio
-            if (!container.innerHTML) {
-                const wordsData = [
-                    "Chuva", "Nevoeiro", "Sombra", "Luz", "Ruído", "Silêncio", "Frio", "Calor", "Poeira", "Cinza", "Ecos", "Escuridão", "Reflexo", "Vazio", "Cheiro",
-                    "Sangue", "Vidro", "Metal", "Ferrugem", "Papel", "Chave", "Fio", "Relógio", "Espelho", "Máquina", "Faca", "Veneno", "Dinheiro", "Carta", "Telefone",
-                    "Verdade", "Mentira", "Segredo", "Culpa", "Inocência", "Tempo", "Passado", "Futuro", "Destino", "Acaso", "Lei", "Caos", "Poder", "Sonho", "Pesadelo",
-                    "Medo", "Raiva", "Desejo", "Vingança", "Fuga", "Busca", "Perda", "Espera", "Queda", "Olhar", "Toque", "Grito", "Sussurro", "Solidão", "Loucura",
-                    "Vítima", "Assassino", "Testemunha", "Criança", "Velho", "Mulher", "Homem", "Casa", "Rua", "Prisão", "Hospital", "Floresta", "Mar", "Ponte", "Janela",
-                    "Início", "Fim", "Sempre", "Nunca", "Talvez", "Antes", "Depois", "Dentro", "Fora", "Alto", "Baixo", "Rápido", "Lento", "Tudo", "Nada"
-                ];
-                wordsData.forEach(word => {
-                    const btn = document.createElement('button');
-                    btn.className = 'word-btn text-xs md:text-sm p-2 border border-gray-400 bg-gray-100 hover:bg-yellow-100 font-mono transition-colors truncate';
-                    btn.innerText = word;
-                    btn.onclick = () => handleWordClick(word, state.wordsSelected);
-                    container.appendChild(btn);
-                });
-            }
+        function renderVotingTable(cards, canVote, myOwnCardId) {
+            const grid = document.getElementById('table-cards-grid');
+            grid.innerHTML = '';
 
-            // Atualiza visual
-            const buttons = container.querySelectorAll('button');
-            buttons.forEach(btn => {
-                const word = btn.innerText;
-                if (state.wordsSelected.includes(word)) {
-                    btn.className = 'word-btn text-xs md:text-sm p-2 bg-yellow-400 border border-black font-bold truncate';
-                } else {
-                    btn.className = 'word-btn text-xs md:text-sm p-2 border border-gray-400 bg-gray-100 hover:bg-yellow-100 font-mono transition-colors truncate';
+            cards.forEach(cardObj => {
+                const url = `https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/${cardObj.cardId}.png?raw=true`;
+                const div = document.createElement('div');
+                const isMine = (cardObj.cardId === myOwnCardId);
+                
+                div.className = `relative card-frame w-24 md:w-32 rounded overflow-hidden shadow-lg border-2 ${isMine ? 'border-yellow-500 opacity-80' : 'border-gray-200'}`;
+                
+                div.innerHTML = `
+                    <img src="${url}" class="w-full h-full object-cover">
+                    ${isMine ? '<div class="absolute bottom-0 w-full bg-yellow-500 text-black text-xs font-bold text-center">SUA CARTA</div>' : ''}
+                `;
+
+                if (canVote && !isMine) {
+                    div.onclick = () => submitVote(cardObj.owner); 
+                } else if (isMine) {
+                    div.style.cursor = 'not-allowed';
                 }
+
+                grid.appendChild(div);
+            });
+        }
+
+        function renderScoreboard(state) {
+            const list = document.getElementById('scoreboard-list');
+            const sorted = [...state.players].sort((a,b) => b.score - a.score);
+            list.innerHTML = sorted.map((p, i) => 
+                `<li class="flex justify-between border-b border-dashed border-gray-400 py-1">
+                    <span>${i+1}. ${p.name}</span>
+                    <span class="font-bold text-red-900">${p.score} pts</span>
+                 </li>`
+            ).join('');
+
+            const witness = state.players[state.witnessIndex];
+            const details = document.getElementById('round-results');
+            details.innerHTML = `
+                <p><strong>A Testemunha:</strong> ${witness ? witness.name : 'N/A'}</p>
+                <p><strong>Palavras:</strong> ${state.currentWords.join(" + ")}</p>
+                <div class="mt-2 text-xs text-gray-600">O primeiro a fazer 40 pts ganha!</div>
+            `;
+        }
+
+
+        // === AÇÕES DO JOGO ===
+
+        window.confirmWitnessPlay = async () => {
+            if (!selectedCard || selectedWords.length !== 2) return;
+
+            const me = localState.players.find(p => p.id === myId);
+            const newHand = me.hand.filter(c => c !== selectedCard);
+
+            const updatedPlayers = localState.players.map(p => {
+                if(p.id === myId) return { ...p, hand: newHand };
+                return p;
             });
 
-            // Atualiza textos
-            document.getElementById('count-words').innerText = state.wordsSelected.length;
-            const btnReveal = document.getElementById('btn-reveal-words');
-            
-            if (state.wordsSelected.length === 2) {
-                btnReveal.disabled = false;
-                btnReveal.classList.remove('opacity-50', 'cursor-not-allowed');
-                btnReveal.classList.add('animate-pulse');
-            } else {
-                btnReveal.disabled = true;
-                btnReveal.classList.add('opacity-50', 'cursor-not-allowed');
-                btnReveal.classList.remove('animate-pulse');
+            await updateDoc(docRef, {
+                currentWords: selectedWords,
+                tableCards: [{ cardId: selectedCard, owner: myId }], 
+                players: updatedPlayers,
+                playedThisRound: [myId],
+                phase: 'detective_play'
+            });
+
+            selectedCard = null;
+            selectedWords = [];
+        };
+
+        async function submitDetectiveCard(cardId) {
+            if(!confirm("Confirmar essa carta para a mesa?")) return;
+
+            const me = localState.players.find(p => p.id === myId);
+            const newHand = me.hand.filter(c => c !== cardId);
+
+            let updatedPlayers = localState.players.map(p => {
+                if(p.id === myId) return { ...p, hand: newHand };
+                return p;
+            });
+
+            const newTableCards = [...localState.tableCards, { cardId: cardId, owner: myId }];
+            const newPlayedList = [...localState.playedThisRound, myId];
+            const allPlayed = (newPlayedList.length === localState.players.length);
+
+            let updates = {
+                players: updatedPlayers,
+                tableCards: newTableCards,
+                playedThisRound: newPlayedList
+            };
+
+            if (allPlayed) {
+                updates.phase = 'voting';
+                updates.tableCards = newTableCards.sort(() => Math.random() - 0.5);
             }
 
-            // Telas
-            const grid = document.getElementById('selection-grid-words');
-            const revealScreen = document.getElementById('reveal-screen-words');
-            const btnReset = document.getElementById('btn-reset-words');
-
-            if (state.wordsRevealed) {
-                grid.classList.add('hidden');
-                btnReveal.classList.add('hidden');
-                revealScreen.classList.remove('hidden'); revealScreen.classList.add('flex');
-                btnReset.classList.remove('hidden');
-                
-                document.getElementById('final-word-1').innerText = state.wordsSelected[0];
-                document.getElementById('final-word-2').innerText = state.wordsSelected[1];
-                document.getElementById('status-message-words').innerText = "ASSOCIAÇÃO CONFIRMADA";
-            } else {
-                grid.classList.remove('hidden');
-                btnReveal.classList.remove('hidden');
-                revealScreen.classList.add('hidden'); revealScreen.classList.remove('flex');
-                btnReset.classList.add('hidden');
-                document.getElementById('status-message-words').innerHTML = `Selecione exatamente 2 palavras (<span id="count-words">${state.wordsSelected.length}</span>/2)`;
-            }
-        }
-
-        // === AÇÕES DE CONTROLE (Envia para Firebase) ===
-        
-        async function updateState(updates) {
-            if (!currentUser) return;
             await updateDoc(docRef, updates);
+            selectedCard = null;
         }
 
-        // Expondo funções globais para o HTML
-        window.startGame = function() {
-            // Tenta ativar audio e wake lock
-            const audio = document.getElementById('bg-music');
-            audio.play().then(() => {
-                window.updateAudioIcon(false);
-            }).catch(e => console.log(e));
-            
-            document.getElementById('splash-screen').classList.add('fade-out');
-            document.getElementById('main-game-container').classList.remove('opacity-0');
-            document.getElementById('main-game-container').classList.add('opacity-100');
-            setTimeout(() => document.getElementById('splash-screen').style.display = 'none', 800);
-            
-            // Wake lock
-            if ('wakeLock' in navigator) navigator.wakeLock.request('screen').catch(e => {});
-        };
+        window.submitVote = async (targetOwnerId) => {
+            if (!confirm("Confirmar voto nesta carta?")) return;
 
-        // Navegação
-        document.getElementById('nav-numbers').onclick = () => updateState({ mode: 'numbers' });
-        document.getElementById('nav-cards').onclick = () => updateState({ mode: 'cards' });
-        document.getElementById('nav-words').onclick = () => updateState({ mode: 'words' });
+            const currentVotes = localState.votes || {};
+            currentVotes[myId] = targetOwnerId;
 
-        // Números
-        document.getElementById('btn-hide-num').onclick = () => updateState({ numHidden: true });
-        document.getElementById('btn-reveal-num').onclick = () => updateState({ numRevealed: true });
-        document.getElementById('btn-reset-num').onclick = () => updateState({ numSelected: null, numHidden: false, numRevealed: false });
+            const detectiveCount = localState.players.length - 1;
+            const votesCount = Object.keys(currentVotes).length;
 
-        // Cartas
-        window.revealCard = async function() {
-            // 1. Inicia giro para todos
-            await updateState({ cardSpinning: true });
-            
-            // 2. Aguarda 3s (Quem clicou controla o sorteio, para não sobrecarregar)
-            setTimeout(async () => {
-                const randomNum = Math.floor(Math.random() * 60) + 1;
-                const newSrc = `https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/${randomNum}.png?raw=true`;
-                
-                await updateState({ 
-                    cardSpinning: false,
-                    cardSrc: newSrc
-                });
-            }, 3000);
-        };
+            let updates = { votes: currentVotes };
 
-        // Palavras
-        window.handleWordClick = async function(word, currentSelected) {
-            let newSelected = [...currentSelected];
-            if (newSelected.includes(word)) {
-                newSelected = newSelected.filter(w => w !== word);
-            } else if (newSelected.length < 2) {
-                newSelected.push(word);
+            if (votesCount >= detectiveCount) {
+                calculateScores(currentVotes);
+            } else {
+                await updateDoc(docRef, updates);
             }
-            await updateState({ wordsSelected: newSelected });
         };
-        
-        document.getElementById('btn-reveal-words').onclick = () => updateState({ wordsRevealed: true });
-        document.getElementById('btn-reset-words').onclick = () => updateState({ wordsSelected: [], wordsRevealed: false });
 
-        // Áudio (Local)
+        async function calculateScores(finalVotes) {
+            const players = [...localState.players];
+            const witness = players[localState.witnessIndex];
+            
+            let witnessVotes = 0;
+            const detectives = players.filter(p => p.id !== witness.id);
+
+            // Contar votos na testemunha
+            Object.values(finalVotes).forEach(targetId => {
+                if (targetId === witness.id) witnessVotes++;
+            });
+
+            // Lógica DIXIT
+            if (witnessVotes === detectives.length || witnessVotes === 0) {
+                // Testemunha 0, Todos Detetives +2
+                detectives.forEach(d => {
+                    const player = players.find(p => p.id === d.id);
+                    player.score += 2;
+                });
+                // Bônus para detetives que enganaram (se ninguém acertou a testemunha)
+                if (witnessVotes === 0) {
+                     Object.values(finalVotes).forEach(targetId => {
+                        const target = players.find(p => p.id === targetId);
+                        if (target && target.id !== witness.id) target.score += 1;
+                    });
+                }
+            } else {
+                // Caso misto
+                witness.score += 3;
+                // Quem acertou +3
+                Object.entries(finalVotes).forEach(([voterId, targetId]) => {
+                    if (targetId === witness.id) {
+                        const d = players.find(p => p.id === voterId);
+                        if(d) d.score += 3;
+                    } else {
+                        // Quem recebeu voto errado ganha +1
+                        const target = players.find(p => p.id === targetId);
+                        if (target) target.score += 1;
+                    }
+                });
+            }
+
+            // Repor mão
+            players.forEach(p => {
+                const newCard = drawCards(1)[0];
+                p.hand.push(newCard);
+            });
+
+            // CHECK WINNER
+            let winner = null;
+            const sortedPlayers = [...players].sort((a,b) => b.score - a.score);
+            if (sortedPlayers[0].score >= WINNING_SCORE) {
+                winner = sortedPlayers[0];
+            }
+
+            if (winner) {
+                await updateDoc(docRef, {
+                    players: players,
+                    votes: finalVotes,
+                    phase: 'game_over',
+                    winner: winner
+                });
+            } else {
+                await updateDoc(docRef, {
+                    players: players,
+                    votes: finalVotes,
+                    phase: 'scoring'
+                });
+            }
+        }
+
+        window.startNextRound = async () => {
+            let nextIndex = localState.witnessIndex + 1;
+            if (nextIndex >= localState.players.length) nextIndex = 0;
+
+            await updateDoc(docRef, {
+                phase: 'witness_setup',
+                witnessIndex: nextIndex,
+                roundCount: localState.roundCount + 1,
+                currentWords: [],
+                tableCards: [],
+                votes: {},
+                playedThisRound: []
+            });
+        };
+
+        window.resetGameData = async () => {
+            if(!confirm("Tem certeza que deseja reiniciar o jogo? O progresso será perdido.")) return;
+            await setDoc(docRef, {
+                phase: 'lobby',
+                players: [],
+                roundCount: 0
+            });
+            window.location.reload();
+        }
+
+        function drawCards(amount) {
+            let cards = [];
+            for(let i=0; i<amount; i++) {
+                cards.push(Math.floor(Math.random() * TOTAL_CARDS) + 1);
+            }
+            return cards;
+        }
+        
         window.toggleAudio = function() {
             const audio = document.getElementById('bg-music');
-            if (audio.paused || audio.muted) {
-                audio.muted = false;
-                audio.play();
-                window.updateAudioIcon(false);
-            } else {
-                audio.muted = true;
-                window.updateAudioIcon(true);
-            }
-        };
-
-        window.updateAudioIcon = function(isMuted) {
-            const on = document.getElementById('icon-sound-on');
-            const off = document.getElementById('icon-sound-off');
-            if (isMuted) {
-                on.classList.add('hidden'); off.classList.remove('hidden');
-            } else {
-                on.classList.remove('hidden'); off.classList.add('hidden');
-            }
+            if (audio.paused) audio.play();
+            else audio.pause();
         };
 
     </script>
