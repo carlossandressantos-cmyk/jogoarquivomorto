@@ -251,20 +251,20 @@
             appId: "1:24019872660:web:bda2b9dacc0530f48b7d81"
         };
 
-        // === CORREÇÃO CRÍTICA: USAR NOME FIXO PARA O APP ===
-        const APP_NAME = 'ArquivoMorto_Game_V1'; // NOME FIXO
+        // === CORREÇÃO: INICIALIZAÇÃO FIREBASE ===
+        const APP_NAME = 'ArquivoMorto_Game_V1';
         let app, auth, db;
 
         try {
-            // Verifica se o app já foi inicializado
             const existingApps = getApps();
             
-            if (existingApps.length > 0) {
-                // Reutiliza o app existente
-                app = getApp(APP_NAME);
+            // Verifica se já existe um app com o nome específico
+            const existingApp = existingApps.find(a => a.name === APP_NAME);
+            
+            if (existingApp) {
+                app = existingApp;
                 console.log("Firebase reutilizando app existente:", APP_NAME);
             } else {
-                // Inicializa novo app
                 app = initializeApp(firebaseConfig, APP_NAME);
                 console.log("Firebase inicializado novo app:", APP_NAME);
             }
@@ -274,8 +274,12 @@
             
         } catch (error) {
             console.error("Erro crítico ao inicializar Firebase:", error);
-            document.getElementById('connection-status').classList.remove('hidden');
-            document.getElementById('error-details').textContent = "Erro na conexão com o servidor.";
+            const errBox = document.getElementById('connection-status');
+            const errDetails = document.getElementById('error-details');
+            if (errBox && errDetails) {
+                errBox.classList.remove('hidden');
+                errDetails.textContent = "Erro na conexão com o servidor: " + error.message;
+            }
         }
 
         // Caminho do Jogo
