@@ -257,17 +257,18 @@
         const auth = getAuth(app);
         
         // === CORREÇÃO CRÍTICA PARA "CLIENT OFFLINE" ===
-        // Usamos initializeFirestore com memoryLocalCache. 
-        // Isso impede que o Firebase tente usar o IndexedDB, que falha em iFrames/Sandboxes.
+        // 1. memoryLocalCache(): Impede salvar no disco (IndexedDB) que causa erro em iframes.
+        // 2. experimentalForceLongPolling: Força HTTP (evita WebSockets bloqueados)
         let db;
         try {
             db = initializeFirestore(app, { 
-                localCache: memoryLocalCache()
+                localCache: memoryLocalCache(),
+                experimentalForceLongPolling: true // ESSENCIAL PARA CORRIGIR "OFFLINE"
             });
-            console.log("Firestore inicializado com Cache em Memória.");
+            console.log("Firestore inicializado com Cache em Memória e LongPolling.");
         } catch (e) {
-            // Se falhar (ex: app já tinha db default), pegamos a instancia existente
-            console.warn("Usando instância existente do Firestore.");
+            // Se falhar (ex: app já tinha db default devido a reload), pegamos a instancia existente
+            console.warn("Usando instância existente do Firestore. Se o erro persistir, recarregue a página.");
             db = getFirestore(app);
         }
         
@@ -334,7 +335,7 @@
                     errBox.classList.remove('hidden');
                     let message = error.message;
                     if (message.includes('offline')) {
-                        message = "Modo Offline forçado ou bloqueio de rede.";
+                        message = "Erro de conexão (Offline). Tente recarregar a página.";
                     }
                     errDetails.innerText = message;
                 }
@@ -391,7 +392,9 @@
 
             } catch (e) {
                 console.error("Erro ao entrar:", e);
-                alert("Erro ao entrar no jogo: " + e.message);
+                let msg = e.message;
+                if(msg.includes("offline")) msg = "Conexão perdida. Por favor, recarregue a página.";
+                alert("Erro ao entrar no jogo: " + msg);
             }
         };
 
