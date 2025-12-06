@@ -1,0 +1,17 @@
+{
+  "name": "jogo-arquivo-morto",
+  "version": "1.0.0",
+  "description": "Jogo multiplayer de investigação estilo noir",
+  "scripts": {
+    "build": "chmod +x ./build.sh && ./build.sh",
+    "dev": "python3 -m http.server 8000 || python -m SimpleHTTPServer 8000"
+  },
+  "keywords": [
+    "game",
+    "multiplayer",
+    "firebase",
+    "detective"
+  ],
+  "author": "",
+  "license": "MIT"
+}
