@@ -239,7 +239,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Importação atualizada para incluir initializeFirestore e memoryLocalCache
+        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc, arrayUnion, initializeFirestore, memoryLocalCache } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // === CONFIGURAÇÃO FIREBASE ===
         const firebaseConfig = {
@@ -253,9 +254,16 @@
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
-        const db = getFirestore(app);
         
-        // Caminho do Jogo CORRIGIDO
+        // CORREÇÃO DEFINITIVA DE CONEXÃO:
+        // 1. memoryLocalCache(): Impede salvar no disco (IndexedDB) que causa erro em iframes.
+        // 2. experimentalForceLongPolling: Usa conexão HTTP simples, mais robusta.
+        const db = initializeFirestore(app, { 
+            localCache: memoryLocalCache(),
+            experimentalForceLongPolling: true 
+        });
+        
+        // Caminho do Jogo
         const GAME_ID = 'sessao_jogo_v4';
         const docRef = doc(db, 'artifacts', 'jogo-arquivo-morto', 'public', 'data', 'gamestate', GAME_ID);
 
@@ -322,39 +330,48 @@
             const name = nameInput.value.trim().toUpperCase();
             if (!name) return;
 
-            myName = name;
-            
-            // Adicionar jogador ao Firestore
-            const newPlayer = {
-                id: myId,
-                name: name,
-                score: 0,
-                hand: drawCards(6) // Dá 6 cartas iniciais
-            };
+            try {
+                myName = name;
+                
+                // Adicionar jogador ao Firestore
+                const newPlayer = {
+                    id: myId,
+                    name: name,
+                    score: 0,
+                    hand: drawCards(6) // Dá 6 cartas iniciais
+                };
 
-            // Pega estado atual para adicionar player
-            const snap = await getDoc(docRef);
-            if(snap.exists()) {
-                const data = snap.data();
-                // Verifica se já está na lista (pelo ID)
-                const existing = data.players.find(p => p.id === myId);
-                if (!existing) {
-                    const updatedPlayers = [...data.players, newPlayer];
-                    await updateDoc(docRef, { players: updatedPlayers });
+                // Pega estado atual para adicionar player
+                const snap = await getDoc(docRef);
+                if(snap.exists()) {
+                    const data = snap.data();
+                    // Verifica se já está na lista (pelo ID)
+                    const existing = data.players.find(p => p.id === myId);
+                    if (!existing) {
+                        const updatedPlayers = [...data.players, newPlayer];
+                        await updateDoc(docRef, { players: updatedPlayers });
+                    }
+                } else {
+                    // Cria se não existir
+                    await setDoc(docRef, {
+                        phase: 'lobby',
+                        players: [newPlayer],
+                        roundCount: 0,
+                        witnessIndex: 0
+                    });
                 }
-            } else {
-                // Cria se não existir
-                await setDoc(docRef, {
-                    phase: 'lobby',
-                    players: [newPlayer],
-                    roundCount: 0,
-                    witnessIndex: 0
-                });
-            }
 
-            // UI Switch
-            document.getElementById('screen-login').classList.add('hidden');
-            document.getElementById('screen-lobby').classList.remove('hidden');
+                // UI Switch
+                document.getElementById('screen-login').classList.add('hidden');
+                document.getElementById('screen-lobby').classList.remove('hidden');
+
+            } catch (e) {
+                console.error("Erro ao entrar:", e);
+                const errBox = document.getElementById('connection-status');
+                const errDetails = document.getElementById('error-details');
+                errBox.classList.remove('hidden');
+                errDetails.innerText = e.message;
+            }
         };
 
         window.requestStartGame = async () => {
