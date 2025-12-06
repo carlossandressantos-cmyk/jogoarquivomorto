@@ -364,6 +364,12 @@ Não recomendado devido a limitações com SPAs e Firebase.
 3. Implemente autenticação para recursos sensíveis
 4. Monitore uso no Firebase Console
 
+**Netlify Secrets Scanning**:
+- O scanner de segredos do Netlify está **desabilitado** via `netlify.toml`
+- Isso é necessário porque Firebase API keys são públicas em aplicações frontend
+- Variável configurada: `SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"`
+- A segurança é garantida pelas regras do Firestore, não pelo ocultamento das keys
+
 ### Variáveis de Ambiente (Opcional)
 
 Para ocultar credenciais do código-fonte:
