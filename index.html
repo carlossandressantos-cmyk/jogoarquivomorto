@@ -95,7 +95,7 @@
             
             <!-- ÁREA DE ERRO -->
             <div id="connection-status" class="mt-4 p-2 bg-red-100 border border-red-400 text-red-700 text-xs hidden text-left font-mono">
-                <strong>ERRO DE CONEXÃO:</strong> <span id="error-details">...</span>
+                <strong>STATUS:</strong> <span id="error-details">Conectando...</span>
             </div>
         </div>
 
@@ -237,10 +237,10 @@
 
     <!-- Módulo JS -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // Importação atualizada para incluir initializeFirestore e memoryLocalCache
-        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc, arrayUnion, initializeFirestore, memoryLocalCache } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Importando getApps para verificar se o app já foi inicializado (Singleton)
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc, initializeFirestore, memoryLocalCache } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // === CONFIGURAÇÃO FIREBASE ===
         const firebaseConfig = {
@@ -252,16 +252,24 @@
             appId: "1:24019872660:web:bda2b9dacc0530f48b7d81"
         };
 
-        const app = initializeApp(firebaseConfig);
+        // Singleton: Verifica se já existe App para evitar erro de re-inicialização
+        const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
         const auth = getAuth(app);
         
-        // CORREÇÃO DEFINITIVA DE CONEXÃO:
-        // 1. memoryLocalCache(): Impede salvar no disco (IndexedDB) que causa erro em iframes.
-        // 2. experimentalForceLongPolling: Usa conexão HTTP simples, mais robusta.
-        const db = initializeFirestore(app, { 
-            localCache: memoryLocalCache(),
-            experimentalForceLongPolling: true 
-        });
+        // === CORREÇÃO CRÍTICA PARA "CLIENT OFFLINE" ===
+        // Usamos initializeFirestore com memoryLocalCache. 
+        // Isso impede que o Firebase tente usar o IndexedDB, que falha em iFrames/Sandboxes.
+        let db;
+        try {
+            db = initializeFirestore(app, { 
+                localCache: memoryLocalCache()
+            });
+            console.log("Firestore inicializado com Cache em Memória.");
+        } catch (e) {
+            // Se falhar (ex: app já tinha db default), pegamos a instancia existente
+            console.warn("Usando instância existente do Firestore.");
+            db = getFirestore(app);
+        }
         
         // Caminho do Jogo
         const GAME_ID = 'sessao_jogo_v4';
@@ -287,41 +295,53 @@
 
         // === INICIALIZAÇÃO ===
         async function init() {
+            const errBox = document.getElementById('connection-status');
+            const errDetails = document.getElementById('error-details');
+
             try {
-                await signInAnonymously(auth);
-                auth.onAuthStateChanged(user => {
+                // Monitor Auth State
+                onAuthStateChanged(auth, (user) => {
                     if(user) {
                         myId = user.uid;
-                        // Escutar o jogo
-                        onSnapshot(docRef, (snap) => {
+                        console.log("Autenticado como:", myId);
+                        
+                        // Escutar o jogo SOMENTE após auth confirmada
+                        const unsubscribe = onSnapshot(docRef, (snap) => {
                             if (snap.exists()) {
                                 localState = snap.data();
                                 renderGame(localState);
+                                if (errBox) errBox.classList.add('hidden');
                             } else {
-                                // Criar estado inicial se não existir
+                                console.log("Documento não existe, aguardando criação...");
+                            }
+                        }, (error) => {
+                            console.error("Erro no Snapshot:", error);
+                            if (errBox) {
+                                errBox.classList.remove('hidden');
+                                errDetails.innerText = "Falha na sincronização. Tentando reconectar...";
                             }
                         });
                     }
                 });
-            } catch (error) {
-                console.error("Erro na conexão:", error);
-                
-                // Exibe o erro na tela de login
-                const errBox = document.getElementById('connection-status');
-                const errDetails = document.getElementById('error-details');
-                errBox.classList.remove('hidden');
-                
-                let message = error.message;
-                if (message.includes('auth/operation-not-allowed')) {
-                    message = "Login Anônimo não ativado no Firebase Console (Authentication > Sign-in method).";
-                } else if (message.includes('network')) {
-                    message = "Erro de rede ou domínio não autorizado.";
-                }
 
-                errDetails.innerText = message;
-                alert("Erro ao conectar: " + message);
+                // Tentar login
+                await signInAnonymously(auth);
+
+            } catch (error) {
+                console.error("Erro fatal na inicialização:", error);
+                
+                if (errBox) {
+                    errBox.classList.remove('hidden');
+                    let message = error.message;
+                    if (message.includes('offline')) {
+                        message = "Modo Offline forçado ou bloqueio de rede.";
+                    }
+                    errDetails.innerText = message;
+                }
             }
         }
+        
+        // Iniciar App
         init();
 
         // === LÓGICA DE LOGIN E LOBBY ===
@@ -329,6 +349,10 @@
             const nameInput = document.getElementById('player-name-input');
             const name = nameInput.value.trim().toUpperCase();
             if (!name) return;
+            if (!myId) {
+                alert("Aguardando conexão com o servidor...");
+                return;
+            }
 
             try {
                 myName = name;
@@ -367,10 +391,7 @@
 
             } catch (e) {
                 console.error("Erro ao entrar:", e);
-                const errBox = document.getElementById('connection-status');
-                const errDetails = document.getElementById('error-details');
-                errBox.classList.remove('hidden');
-                errDetails.innerText = e.message;
+                alert("Erro ao entrar no jogo: " + e.message);
             }
         };
 
@@ -398,7 +419,11 @@
             if (state.phase === 'lobby') {
                 const list = document.getElementById('lobby-player-list');
                 list.innerHTML = state.players.map(p => `<li>👮 ${p.name} ${p.id === myId ? '(VOCÊ)' : ''}</li>`).join('');
-                return; // Para aqui se for lobby
+                // Switch UI caso esteja no login
+                document.getElementById('screen-login').classList.add('hidden');
+                document.getElementById('screen-lobby').classList.remove('hidden');
+                document.getElementById('screen-game').classList.add('hidden');
+                return;
             }
 
             // Se o jogo começou e eu ainda estou na tela de login/lobby
