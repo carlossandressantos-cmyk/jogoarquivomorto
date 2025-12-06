@@ -242,13 +242,22 @@
         import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // === CONFIGURAÇÃO FIREBASE ===
-        const firebaseConfig = {
-            apiKey: "AIzaSyAbddYCH65EHCTRluFHe4FOE6J5z9yBLxw",
-            authDomain: "jogo-arquivo-morto.firebaseapp.com",
-            projectId: "jogo-arquivo-morto",
-            storageBucket: "jogo-arquivo-morto.firebasestorage.app",
-            messagingSenderId: "24019872660",
-            appId: "1:24019872660:web:bda2b9dacc0530f48b7d81"
+        // Configuração carregada de variáveis de ambiente (injetadas durante build)
+        const firebaseConfig = window.ENV ? {
+            apiKey: window.ENV.FIREBASE_API_KEY,
+            authDomain: window.ENV.FIREBASE_AUTH_DOMAIN,
+            projectId: window.ENV.FIREBASE_PROJECT_ID,
+            storageBucket: window.ENV.FIREBASE_STORAGE_BUCKET,
+            messagingSenderId: window.ENV.FIREBASE_MESSAGING_SENDER_ID,
+            appId: window.ENV.FIREBASE_APP_ID
+        } : {
+            // Fallback para desenvolvimento local
+            apiKey: "YOUR_API_KEY_HERE",
+            authDomain: "YOUR_AUTH_DOMAIN_HERE",
+            projectId: "YOUR_PROJECT_ID_HERE",
+            storageBucket: "YOUR_STORAGE_BUCKET_HERE",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
+            appId: "YOUR_APP_ID_HERE"
         };
 
         // === CORREÇÃO: INICIALIZAÇÃO FIREBASE ===
