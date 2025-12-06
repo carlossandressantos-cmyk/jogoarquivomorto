@@ -652,6 +652,8 @@
                 if (state.tableCards && state.tableCards.length > 0) {
                     if (isWitness) {
                         // Testemunha não vota, só assiste
+                        msgContainer.classList.remove('hidden');
+                        document.getElementById('msg-title').innerText = "Fase de Votação";
                         document.getElementById('msg-body').innerText = "Você não vota neste turno.";
                         renderVotingTable(state.tableCards, false, null);
                     } else {
@@ -672,7 +674,11 @@
 
             // FASE 4: PONTUAÇÃO
             else if (state.phase === 'scoring') {
-                evidenceDisplay.classList.remove('hidden');
+                if (state.currentWords && state.currentWords.length >= 2) {
+                    evidenceDisplay.classList.remove('hidden');
+                    document.getElementById('evidence-1').innerText = state.currentWords[0];
+                    document.getElementById('evidence-2').innerText = state.currentWords[1];
+                }
                 scoringBoard.classList.remove('hidden');
                 renderScoreboard(state);
             }
@@ -716,7 +722,10 @@
 
         function renderWords() {
             const grid = document.getElementById('word-grid');
-            if (!grid || grid.children.length > 0) return;
+            if (!grid) return;
+            
+            // Limpar apenas se vazio
+            if (grid.children.length > 0) return;
 
             WORDS_LIST.forEach(word => {
                 const btn = document.createElement('button');
@@ -757,4 +766,316 @@
             }
 
             cards.forEach(cardObj => {
-                const url
+                const url = `https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/${cardObj.cardId}.png?raw=true`;
+                const div = document.createElement('div');
+                
+                // Se é a carta do próprio jogador, não pode votar nela
+                const isMyCard = cardObj.cardId === myOwnCardId;
+                const canClickThis = canVote && !isMyCard;
+                
+                div.className = `card-frame rounded overflow-hidden w-32 md:w-40 aspect-[2/3] bg-gray-800 border-2 relative ${canClickThis ? 'border-yellow-500 hover:border-red-500' : 'border-gray-600'} ${isMyCard ? 'opacity-50' : ''}`;
+                div.innerHTML = `
+                    <img src="${url}" class="w-full h-full object-cover" alt="Carta ${cardObj.cardId}">
+                    ${isMyCard ? '<div class="absolute bottom-0 w-full bg-red-900 text-white text-xs text-center py-1">SUA CARTA</div>' : ''}
+                `;
+                
+                if (canClickThis) {
+                    div.onclick = async () => {
+                        if (confirm(`Votar nesta carta como sendo da TESTEMUNHA?`)) {
+                            try {
+                                // Registra voto
+                                const currentVotes = localState.votes || {};
+                                currentVotes[myId] = cardObj.owner;
+                                
+                                await updateDoc(docRef, {
+                                    votes: currentVotes
+                                });
+                                
+                                // Verificar se todos votaram
+                                checkIfAllVoted();
+                            } catch (e) {
+                                console.error("Erro ao votar:", e);
+                                alert("Erro ao registrar voto: " + e.message);
+                            }
+                        }
+                    };
+                }
+                
+                grid.appendChild(div);
+            });
+        }
+
+        async function checkIfAllVoted() {
+            if (!localState || !localState.players || !localState.votes) return;
+            
+            // Testemunha não vota
+            const witness = localState.players[localState.witnessIndex];
+            const detectivesCount = localState.players.length - 1;
+            const votesCount = Object.keys(localState.votes).length;
+            
+            if (votesCount >= detectivesCount) {
+                // Todos votaram, calcular pontuação
+                await calculateScores();
+            }
+        }
+
+        async function calculateScores() {
+            if (!localState || !localState.players || !localState.votes) return;
+            
+            try {
+                const witness = localState.players[localState.witnessIndex];
+                const votes = localState.votes;
+                
+                // Contar votos
+                const voteCounts = {};
+                Object.values(votes).forEach(votedId => {
+                    voteCounts[votedId] = (voteCounts[votedId] || 0) + 1;
+                });
+                
+                // Calcular pontos
+                const updatedPlayers = localState.players.map(p => {
+                    let points = 0;
+                    
+                    if (p.id === witness.id) {
+                        // Testemunha ganha pontos pelos votos que recebeu
+                        points = voteCounts[p.id] || 0;
+                    } else {
+                        // Detetives ganham pontos se votaram corretamente
+                        if (votes[p.id] === witness.id) {
+                            points = 3;
+                        }
+                    }
+                    
+                    return {
+                        ...p,
+                        score: (p.score || 0) + points
+                    };
+                });
+                
+                // Verificar se alguém ganhou
+                const winner = updatedPlayers.find(p => p.score >= WINNING_SCORE);
+                
+                if (winner) {
+                    await updateDoc(docRef, {
+                        phase: 'game_over',
+                        players: updatedPlayers,
+                        winner: winner
+                    });
+                } else {
+                    await updateDoc(docRef, {
+                        phase: 'scoring',
+                        players: updatedPlayers
+                    });
+                }
+            } catch (e) {
+                console.error("Erro ao calcular pontos:", e);
+            }
+        }
+
+        function renderScoreboard(state) {
+            const resultsDiv = document.getElementById('round-results');
+            const scoreList = document.getElementById('scoreboard-list');
+            
+            if (!state || !state.players) return;
+            
+            // Resultados do turno
+            const witness = state.players[state.witnessIndex];
+            resultsDiv.innerHTML = `
+                <div class="bg-yellow-100 p-3 border border-yellow-400 mb-2">
+                    <strong>TESTEMUNHA:</strong> ${witness ? witness.name : 'Desconhecido'}
+                </div>
+                <div class="text-sm">
+                    <strong>PALAVRAS ESCOLHIDAS:</strong> 
+                    ${state.currentWords ? state.currentWords.join(' & ') : 'N/A'}
+                </div>
+            `;
+            
+            // Placar geral
+            const sortedPlayers = [...state.players].sort((a, b) => (b.score || 0) - (a.score || 0));
+            scoreList.innerHTML = sortedPlayers.map(p => `
+                <li class="flex justify-between p-2 border-b border-gray-300 ${p.id === myId ? 'bg-yellow-100 font-bold' : ''}">
+                    <span>👮 ${p.name}</span>
+                    <span class="font-mono">${p.score || 0} pts</span>
+                </li>
+            `).join('');
+        }
+
+        window.confirmWitnessPlay = async () => {
+            if (!selectedCard || selectedWords.length !== 2) {
+                alert("Selecione 1 carta e 2 palavras.");
+                return;
+            }
+            
+            try {
+                // Adicionar carta da testemunha à mesa
+                const tableCards = [{
+                    cardId: selectedCard,
+                    owner: myId
+                }];
+                
+                // Remover carta da mão
+                const me = localState.players.find(p => p.id === myId);
+                if (me && me.hand) {
+                    const newHand = me.hand.filter(c => c !== selectedCard);
+                    
+                    const updatedPlayers = localState.players.map(p => 
+                        p.id === myId ? { ...p, hand: newHand } : p
+                    );
+                    
+                    await updateDoc(docRef, {
+                        phase: 'detective_play',
+                        currentWords: selectedWords,
+                        tableCards: tableCards,
+                        playedThisRound: [myId],
+                        players: updatedPlayers
+                    });
+                    
+                    // Reset seleções
+                    selectedCard = null;
+                    selectedWords = [];
+                }
+            } catch (e) {
+                console.error("Erro ao confirmar jogada:", e);
+                alert("Erro ao enviar: " + e.message);
+            }
+        };
+
+        async function submitDetectiveCard(cardId) {
+            if (!localState || localState.phase !== 'detective_play') return;
+            
+            try {
+                // Verificar se já jogou
+                if (localState.playedThisRound && localState.playedThisRound.includes(myId)) {
+                    return;
+                }
+                
+                // Adicionar carta à mesa
+                const newTableCard = {
+                    cardId: cardId,
+                    owner: myId
+                };
+                
+                const updatedTableCards = [...(localState.tableCards || []), newTableCard];
+                const updatedPlayedList = [...(localState.playedThisRound || []), myId];
+                
+                // Remover carta da mão
+                const me = localState.players.find(p => p.id === myId);
+                if (me && me.hand) {
+                    const newHand = me.hand.filter(c => c !== cardId);
+                    
+                    const updatedPlayers = localState.players.map(p => 
+                        p.id === myId ? { ...p, hand: newHand } : p
+                    );
+                    
+                    await updateDoc(docRef, {
+                        tableCards: updatedTableCards,
+                        playedThisRound: updatedPlayedList,
+                        players: updatedPlayers
+                    });
+                    
+                    selectedCard = null;
+                    
+                    // Verificar se todos jogaram
+                    checkIfAllPlayedCards(updatedPlayedList);
+                }
+            } catch (e) {
+                console.error("Erro ao jogar carta:", e);
+                alert("Erro ao enviar carta: " + e.message);
+            }
+        }
+
+        async function checkIfAllPlayedCards(playedList) {
+            if (!localState || !localState.players) return;
+            
+            // Todos menos a testemunha + a testemunha = todos
+            if (playedList.length >= localState.players.length) {
+                // Embaralhar cartas da mesa
+                const shuffled = [...localState.tableCards].sort(() => Math.random() - 0.5);
+                
+                await updateDoc(docRef, {
+                    phase: 'voting',
+                    tableCards: shuffled,
+                    votes: {}
+                });
+            }
+        }
+
+        window.startNextRound = async () => {
+            if (!localState || !localState.players) return;
+            
+            try {
+                // Próxima testemunha
+                const nextWitnessIndex = (localState.witnessIndex + 1) % localState.players.length;
+                
+                // Dar novas cartas para quem precisa
+                const updatedPlayers = localState.players.map(p => {
+                    if (p.hand && p.hand.length < 6) {
+                        const needed = 6 - p.hand.length;
+                        const newCards = drawCards(needed);
+                        return { ...p, hand: [...p.hand, ...newCards] };
+                    }
+                    return p;
+                });
+                
+                await updateDoc(docRef, {
+                    phase: 'witness_setup',
+                    witnessIndex: nextWitnessIndex,
+                    roundCount: (localState.roundCount || 0) + 1,
+                    currentWords: [],
+                    tableCards: [],
+                    votes: {},
+                    playedThisRound: [],
+                    players: updatedPlayers
+                });
+            } catch (e) {
+                console.error("Erro ao iniciar novo round:", e);
+                alert("Erro: " + e.message);
+            }
+        };
+
+        window.resetGameData = async () => {
+            if (!confirm("Reiniciar o jogo? Todos os dados serão perdidos.")) return;
+            
+            try {
+                await updateDoc(docRef, {
+                    phase: 'lobby',
+                    players: [],
+                    roundCount: 0,
+                    witnessIndex: 0,
+                    currentWords: [],
+                    tableCards: [],
+                    votes: {},
+                    playedThisRound: [],
+                    winner: null
+                });
+                
+                // Recarregar página
+                location.reload();
+            } catch (e) {
+                console.error("Erro ao resetar:", e);
+                alert("Erro ao reiniciar: " + e.message);
+            }
+        };
+
+        window.toggleAudio = () => {
+            const audio = document.getElementById('bg-music');
+            if (audio.paused) {
+                audio.play();
+            } else {
+                audio.pause();
+            }
+        };
+
+        // === FUNÇÃO AUXILIAR: SORTEAR CARTAS ===
+        function drawCards(count) {
+            const cards = [];
+            for (let i = 0; i < count; i++) {
+                const randomCard = Math.floor(Math.random() * TOTAL_CARDS) + 1;
+                cards.push(randomCard);
+            }
+            return cards;
+        }
+
+    </script>
+</body>
+</html>
