@@ -301,6 +301,24 @@ git log --oneline
 
 **Solução**: Confirme que as regras do Firestore estão configuradas corretamente (Passo 1.3).
 
+### Erro: "Secrets scanning found secrets in build" no Netlify
+
+**Problema**: Netlify detecta a API Key do Firebase e bloqueia o build.
+
+**Solução**: Já está resolvido! O arquivo `netlify.toml` tem a configuração:
+```toml
+SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+```
+
+**Por que é seguro?**
+- Firebase API keys são PÚBLICAS por natureza em apps frontend
+- A segurança vem das regras do Firestore, não do ocultamento da key
+- Qualquer site que usa Firebase expõe a API key no código cliente
+- Para proteger seus dados:
+  1. Configure as regras do Firestore corretamente
+  2. Adicione restrições de domínio no Firebase Console
+  3. Implemente autenticação quando necessário
+
 ### Site não atualiza no Netlify
 
 **Solução**: 
