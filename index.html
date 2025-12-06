@@ -252,23 +252,28 @@
             appId: "1:24019872660:web:bda2b9dacc0530f48b7d81"
         };
 
-        // Singleton: Verifica se já existe App para evitar erro de re-inicialização
-        const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+        // === CORREÇÃO CRÍTICA V4: Forçar LongPolling e Novo App ===
+        // Isso resolve o problema de "offline" em ambientes que bloqueiam WebSockets ou IndexedDB
+        const APP_NAME = "ArquivoMorto_v4_Final";
+        let app;
+        try {
+            app = getApp(APP_NAME);
+        } catch (e) {
+            app = initializeApp(firebaseConfig, APP_NAME);
+        }
+
         const auth = getAuth(app);
         
-        // === CORREÇÃO CRÍTICA PARA "CLIENT OFFLINE" ===
-        // 1. memoryLocalCache(): Impede salvar no disco (IndexedDB) que causa erro em iframes.
-        // 2. experimentalForceLongPolling: Força HTTP (evita WebSockets bloqueados)
         let db;
         try {
+            // COMBINAÇÃO ROBUSTA: Cache em memória + Force Long Polling
             db = initializeFirestore(app, { 
                 localCache: memoryLocalCache(),
-                experimentalForceLongPolling: true // ESSENCIAL PARA CORRIGIR "OFFLINE"
+                experimentalForceLongPolling: true 
             });
-            console.log("Firestore inicializado com Cache em Memória e LongPolling.");
+            console.log("Firestore inicializado (Modo V4: Memória + HTTP Polling).");
         } catch (e) {
-            // Se falhar (ex: app já tinha db default devido a reload), pegamos a instancia existente
-            console.warn("Usando instância existente do Firestore. Se o erro persistir, recarregue a página.");
+            console.warn("Usando instância existente do Firestore.", e);
             db = getFirestore(app);
         }
         
@@ -299,6 +304,14 @@
             const errBox = document.getElementById('connection-status');
             const errDetails = document.getElementById('error-details');
 
+            if (!navigator.onLine) {
+                 if (errBox) {
+                    errBox.classList.remove('hidden');
+                    errDetails.innerText = "Sem conexão com a internet.";
+                 }
+                 return;
+            }
+
             try {
                 // Monitor Auth State
                 onAuthStateChanged(auth, (user) => {
@@ -319,13 +332,13 @@
                             console.error("Erro no Snapshot:", error);
                             if (errBox) {
                                 errBox.classList.remove('hidden');
-                                errDetails.innerText = "Falha na sincronização. Tentando reconectar...";
+                                errDetails.innerText = "Erro de Sincronização. Tentando reconectar...";
                             }
                         });
                     }
                 });
 
-                // Tentar login
+                // Tentar login explicitamente
                 await signInAnonymously(auth);
 
             } catch (error) {
@@ -335,7 +348,7 @@
                     errBox.classList.remove('hidden');
                     let message = error.message;
                     if (message.includes('offline')) {
-                        message = "Erro de conexão (Offline). Tente recarregar a página.";
+                        message = "Erro de conexão. Tentando reconexão HTTP...";
                     }
                     errDetails.innerText = message;
                 }
@@ -350,10 +363,18 @@
             const nameInput = document.getElementById('player-name-input');
             const name = nameInput.value.trim().toUpperCase();
             if (!name) return;
-            if (!myId) {
-                alert("Aguardando conexão com o servidor...");
-                return;
+            
+            // Verificação extra de autenticação
+            if (!auth.currentUser) {
+                alert("Conectando ao servidor... Aguarde um momento.");
+                try {
+                     await signInAnonymously(auth);
+                } catch(e) {
+                     alert("Falha na conexão: " + e.message);
+                     return;
+                }
             }
+            myId = auth.currentUser.uid;
 
             try {
                 myName = name;
@@ -393,7 +414,7 @@
             } catch (e) {
                 console.error("Erro ao entrar:", e);
                 let msg = e.message;
-                if(msg.includes("offline")) msg = "Conexão perdida. Por favor, recarregue a página.";
+                if(msg.includes("offline")) msg = "Conexão instável. Tente novamente.";
                 alert("Erro ao entrar no jogo: " + msg);
             }
         };
