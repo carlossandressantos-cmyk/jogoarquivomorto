@@ -92,7 +92,11 @@
             <button onclick="joinGame()" class="w-full bg-gray-900 text-white py-3 font-bold tracking-widest hover:bg-red-900 transition-colors border-2 border-black">
                 ENTRAR NO CASO
             </button>
-            <p id="login-error" class="text-red-600 text-xs mt-2 hidden">Preencha o nome corretamente.</p>
+            
+            <!-- ÁREA DE ERRO -->
+            <div id="connection-status" class="mt-4 p-2 bg-red-100 border border-red-400 text-red-700 text-xs hidden text-left font-mono">
+                <strong>ERRO DE CONEXÃO:</strong> <span id="error-details">...</span>
+            </div>
         </div>
 
         <!-- TELA 2: LOBBY -->
@@ -113,7 +117,7 @@
             <div class="w-full md:w-1/3 flex flex-col justify-center border-l-2 border-gray-400 pl-6 border-dashed">
                 <div class="bg-yellow-100 p-4 border border-yellow-300 mb-6 text-sm">
                     <strong>INSTRUÇÕES:</strong><br>
-                    Aguarde os jogadores (4 a 8).<br>
+                    Aguarde os jogadores (3 a 8).<br>
                     O primeiro a atingir <strong>40 Pontos</strong> vence.<br>
                     Qualquer um pode iniciar.
                 </div>
@@ -251,7 +255,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         
-        // Caminho do Jogo CORRIGIDO (Adicionado 'data' para ter 6 segmentos)
+        // Caminho do Jogo CORRIGIDO
         const GAME_ID = 'sessao_jogo_v4';
         const docRef = doc(db, 'artifacts', 'jogo-arquivo-morto', 'public', 'data', 'gamestate', GAME_ID);
 
@@ -287,14 +291,27 @@
                                 renderGame(localState);
                             } else {
                                 // Criar estado inicial se não existir
-                                // Para novos jogadores que entrarem antes do reset ser feito
                             }
                         });
                     }
                 });
             } catch (error) {
                 console.error("Erro na conexão:", error);
-                alert("Erro ao conectar no banco de dados. Verifique a configuração.");
+                
+                // Exibe o erro na tela de login
+                const errBox = document.getElementById('connection-status');
+                const errDetails = document.getElementById('error-details');
+                errBox.classList.remove('hidden');
+                
+                let message = error.message;
+                if (message.includes('auth/operation-not-allowed')) {
+                    message = "Login Anônimo não ativado no Firebase Console (Authentication > Sign-in method).";
+                } else if (message.includes('network')) {
+                    message = "Erro de rede ou domínio não autorizado.";
+                }
+
+                errDetails.innerText = message;
+                alert("Erro ao conectar: " + message);
             }
         }
         init();
@@ -341,8 +358,9 @@
         };
 
         window.requestStartGame = async () => {
-            if (!localState || localState.players.length < 2) {
-                alert("Atenção: Para uma melhor experiência, recomendamos pelo menos 3 agentes.");
+            if (!localState || localState.players.length < 3) {
+                alert("É necessário no mínimo 3 agentes para iniciar a investigação.");
+                return;
             }
             
             // Configurar Round 1
