@@ -1,19 +1,9 @@
 [build]
-  command = "npm run build"
+  command = "chmod +x ./build.sh && ./build.sh"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "18"
-
-[[plugins]]
-  package = "@netlify/plugin-env-vars"
-
-# Configuração para injetar variáveis de ambiente no build
-[context.production]
-  command = "chmod +x ./build.sh && ./build.sh"
-
-[context.deploy-preview]
-  command = "chmod +x ./build.sh && ./build.sh"
 
 # Headers de segurança
 [[headers]]
