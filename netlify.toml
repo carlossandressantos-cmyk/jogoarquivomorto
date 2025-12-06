@@ -13,6 +13,8 @@
 # Configurações de deploy
 [build.environment]
   NODE_VERSION = "18"
+  # Desabilitar scan de secrets - Firebase API keys são públicas em apps frontend
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
 
 # Redirecionamentos para SPA (Single Page Application)
 [[redirects]]
