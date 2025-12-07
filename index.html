@@ -222,20 +222,34 @@
         <!-- TELA 3: JOGO (TABULEIRO) -->
         <div id="screen-game" class="hidden w-full flex flex-col gap-4 fade-in">
             
-            <!-- BARRA DE STATUS SUPERIOR -->
-            <div class="paper-texture p-3 flex justify-between items-center rounded border-b-4 border-red-900">
-                <div>
-                    <span class="text-xs text-gray-500 block">TESTEMUNHA ATUAL</span>
-                    <span id="current-witness-name" class="text-xl font-bold title-font text-red-900">...</span>
+            <!-- BARRA DE STATUS SUPERIOR (ATUALIZADA COM TOP 3) -->
+            <div class="paper-texture p-2 md:p-3 flex flex-wrap justify-between items-center rounded border-b-4 border-red-900 gap-y-2">
+                
+                <!-- Testemunha -->
+                <div class="w-1/2 md:w-1/4">
+                    <span class="text-[10px] text-gray-500 block">TESTEMUNHA</span>
+                    <span id="current-witness-name" class="text-base md:text-xl font-bold title-font text-red-900 leading-none">...</span>
                 </div>
-                <div class="text-center">
-                    <span class="text-xs text-gray-500 block">FASE</span>
-                    <span id="game-phase-display" class="font-bold bg-black text-white px-3 py-1 text-sm rounded">...</span>
+
+                <!-- TOP 3 (NOVO) -->
+                <div class="order-last md:order-none w-full md:w-2/4 flex justify-center">
+                    <div id="top-rank-display" class="flex gap-2 text-[10px] md:text-xs font-mono bg-gray-300/50 p-1 rounded border border-gray-400">
+                        <!-- Injetado via JS -->
+                    </div>
                 </div>
-                <div class="text-right">
-                    <span class="text-xs text-gray-500 block">SEUS PONTOS</span>
-                    <span id="my-score" class="text-2xl font-bold title-font">0</span>
-                    <span class="text-[10px] text-gray-600">/ 25</span>
+
+                <!-- Pontos Pessoais -->
+                <div class="w-1/2 md:w-1/4 text-right">
+                    <span class="text-[10px] text-gray-500 block">SEUS PONTOS</span>
+                    <div class="leading-none">
+                        <span id="my-score" class="text-xl md:text-2xl font-bold title-font">0</span>
+                        <span class="text-[10px] text-gray-600">/ 25</span>
+                    </div>
+                </div>
+                
+                <!-- Fase (Movido para ficar discreto ou integrado) -->
+                <div class="absolute top-0 right-0 -mt-2 -mr-2 hidden md:block">
+                     <span id="game-phase-display" class="font-bold bg-black text-white px-2 py-1 text-[10px] rounded shadow-lg uppercase tracking-widest">...</span>
                 </div>
             </div>
 
@@ -553,6 +567,17 @@
 
             const isWitness = (witness && myId === witness.id);
             const phaseDisplay = document.getElementById('game-phase-display');
+            if(phaseDisplay) phaseDisplay.innerText = state.phase.replace('_', ' ');
+
+            // ATUALIZAÇÃO: TOP 3 NO HEADER
+            const top3 = [...state.players].sort((a,b) => b.score - a.score).slice(0, 3);
+            const rankHtml = top3.map((p, i) => {
+                const medals = ["🥇", "🥈", "🥉"];
+                return `<div class="flex items-center gap-1 ${p.id === myId ? 'font-bold text-red-900' : 'text-gray-700'}">
+                    <span>${medals[i]} ${p.name.split(' ')[0]}: ${p.score}</span>
+                </div>`;
+            }).join('<span class="mx-1 text-gray-400">|</span>');
+            document.getElementById('top-rank-display').innerHTML = rankHtml || "Carregando Ranking...";
 
             // Reset Visibilidade
             ['hand-area', 'word-selection-area', 'msg-container', 'voting-table', 'scoring-board', 'evidence-display', 'game-over-screen']
@@ -738,21 +763,47 @@
                 <p><strong>Palavras:</strong> ${state.currentWords.join(" + ")}</p>
             `;
 
-            // Renderiza as cartas reveladas com nomes
+            // Renderiza as cartas reveladas com nomes E VOTOS (ATUALIZADO)
             const revealedGrid = document.getElementById('revealed-cards-grid');
             revealedGrid.innerHTML = '';
+            
             state.tableCards.forEach(cardObj => {
-                const p = state.players.find(pl => pl.id === cardObj.owner);
+                const owner = state.players.find(pl => pl.id === cardObj.owner);
                 const isWitnessCard = (cardObj.owner === witness.id);
                 const url = `https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/${cardObj.cardId}.png?raw=true`;
                 
+                // Encontrar quem votou nesta carta
+                const voters = [];
+                if (state.votes) {
+                    Object.entries(state.votes).forEach(([voterId, targetId]) => {
+                        if (targetId === cardObj.owner) {
+                            const voter = state.players.find(p => p.id === voterId);
+                            if (voter) voters.push(voter.name.split(' ')[0]); // Pega só o primeiro nome
+                        }
+                    });
+                }
+
                 const div = document.createElement('div');
-                div.className = `w-20 md:w-24 border-2 ${isWitnessCard ? 'border-red-600' : 'border-gray-400'} rounded overflow-hidden bg-gray-200 flex flex-col`;
+                div.className = `relative w-24 md:w-32 border-2 ${isWitnessCard ? 'border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]' : 'border-gray-400'} rounded overflow-visible bg-gray-200 flex flex-col mb-4`;
+                
+                // HTML dos votos (Post-its)
+                let votersHtml = '';
+                if (voters.length > 0) {
+                    votersHtml = `<div class="absolute -top-2 -right-2 flex flex-col items-end gap-1">`;
+                    voters.forEach(vName => {
+                        votersHtml += `<span class="bg-yellow-200 text-black text-[9px] px-1 py-0.5 border border-yellow-400 shadow-sm rotate-3 transform origin-bottom-left whitespace-nowrap">🗳️ ${vName}</span>`;
+                    });
+                    votersHtml += `</div>`;
+                }
+
                 div.innerHTML = `
-                    <img src="${url}" class="w-full h-24 object-cover">
-                    <div class="text-[10px] p-1 text-center font-bold ${isWitnessCard ? 'bg-red-600 text-white' : 'text-black'}">
-                        ${p ? p.name : '???'}
-                        ${isWitnessCard ? '<br>(TESTEMUNHA)' : ''}
+                    <div class="relative">
+                        <img src="${url}" class="w-full h-32 object-cover opacity-90">
+                        ${votersHtml}
+                    </div>
+                    <div class="text-[10px] p-1 text-center font-bold leading-tight ${isWitnessCard ? 'bg-red-600 text-white' : 'bg-gray-300 text-black'}">
+                        ${isWitnessCard ? '★ TESTEMUNHA ★' : ''}
+                        <div class="truncate">${owner ? owner.name : '???'}</div>
                     </div>
                 `;
                 revealedGrid.appendChild(div);
