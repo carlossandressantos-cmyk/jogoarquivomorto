@@ -375,7 +375,12 @@
 
             } catch (e) {
                 console.error("Erro fatal:", e);
-                statusDiv.innerText = "Erro Crítico: " + e.message;
+                // TRATAMENTO DE ERRO DE CONFIGURAÇÃO DE AUTH
+                if (e.code === 'auth/configuration-not-found' || e.code === 'auth/operation-not-allowed' || e.code === 'auth/admin-restricted-operation') {
+                    statusDiv.innerHTML = `<span class='font-bold text-red-600'>ERRO DE AUTENTICAÇÃO:</span><br>Falta ativar o Login Anônimo no console.<br>1. Vá em "Authentication" > "Sign-in method".<br>2. Ative o provedor "Anônimo".`;
+                } else {
+                    statusDiv.innerText = "Erro Crítico: " + e.message;
+                }
             }
         };
 
