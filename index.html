@@ -1,12 +1,727 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Youware App</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquivo Morto - O Jogo (DEV MODE)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+    <style>
+        /* TEMA NOIR / INVESTIGAÇÃO */
+        body { font-family: 'Courier Prime', monospace; background-color: #111; color: #eee; overflow-x: hidden; }
+        .title-font { font-family: 'Special Elite', cursive; }
+        
+        /* Textura de Papel */
+        .paper-texture {
+            background-color: #e3e3e3;
+            background-image: url('https://www.transparenttextures.com/patterns/aged-paper.png');
+            color: #1a1a1a;
+            box-shadow: 0 0 50px rgba(0,0,0,0.9);
+        }
+
+        /* Cartas */
+        .card-frame {
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .card-frame:hover {
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            z-index: 10;
+        }
+        .card-selected {
+            border: 4px solid #b91c1c; /* Red border */
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(185, 28, 28, 0.6);
+        }
+        
+        /* Botões e Inputs */
+        input:focus { outline: none; border-color: #b91c1c; }
+        
+        /* Animações */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #333; }
+        ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4 bg-[url('https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/fundo-site.png?raw=true')] bg-cover bg-fixed bg-center">
+    
+    <!-- OVERLAY ESCURO -->
+    <div class="fixed inset-0 bg-black/80 z-[-1]"></div>
+
+    <!-- ÁUDIO -->
+    <audio id="bg-music" loop>
+        <source src="https://files.catbox.moe/tni4fx.mp3" type="audio/mpeg">
+    </audio>
+    <button onclick="toggleAudio()" class="fixed top-4 right-4 z-50 p-2 bg-black/50 text-white rounded-full border border-gray-600 hover:bg-red-900/50">
+        🔊/🔇
+    </button>
+
+    <!-- HEADER -->
+    <header class="w-full max-w-5xl flex flex-col items-center mb-4 mt-2">
+        <img src="https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/logo-site.png?raw=true" class="h-24 md:h-32 object-contain drop-shadow-lg mb-2">
+        <div class="text-xs text-gray-500 tracking-[0.3em]">DEPARTAMENTO DE CASOS FRIOS</div>
+    </header>
+
+    <!-- ÁREA PRINCIPAL DO JOGO -->
+    <main id="game-app" class="w-full max-w-5xl min-h-[600px] relative">
+        
+        <!-- TELA 1: LOGIN E SELEÇÃO DE SALA -->
+        <div id="screen-login" class="paper-texture max-w-md mx-auto p-8 rounded shadow-2xl mt-10 text-center fade-in">
+            <h2 class="text-2xl title-font mb-6 border-b-2 border-gray-800 pb-2">Identificação</h2>
+            
+            <!-- Aviso de Protocolo Local -->
+            <div id="file-protocol-warning" class="hidden mb-4 p-3 bg-red-100 border-l-4 border-red-600 text-red-900 text-xs text-left">
+                <strong>⚠️ MODO OFFLINE DETECTADO:</strong> Você abriu o arquivo direto. Navegadores bloqueiam conexões assim.<br>
+                <span class="block mt-1">Solução: Use a extensão <strong>"Live Server"</strong> no VS Code ou hospede no Vercel/GitHub Pages.</span>
+            </div>
+
+            <!-- Nome -->
+            <div class="mb-4">
+                <label class="block text-sm font-bold mb-2 text-left">NOME DO AGENTE:</label>
+                <input type="text" id="player-name-input" class="w-full bg-gray-200 border-2 border-gray-400 p-3 font-mono text-lg uppercase" placeholder="SEU NOME">
+            </div>
+
+            <!-- Sala -->
+            <div class="mb-6">
+                <label class="block text-sm font-bold mb-2 text-left">CÓDIGO DO ARQUIVO (SALA):</label>
+                <div class="flex gap-2">
+                    <input type="text" id="room-code-input" class="w-2/3 bg-gray-200 border-2 border-gray-400 p-3 font-mono text-lg uppercase tracking-widest" placeholder="EX: A1B2" maxlength="4">
+                    <button onclick="generateRoomCode()" class="w-1/3 bg-gray-800 text-white text-xs p-2 hover:bg-gray-700">GERAR NOVO</button>
+                </div>
+            </div>
+
+            <button onclick="joinGame()" class="w-full bg-red-900 text-white py-3 font-bold tracking-widest hover:bg-red-800 transition-colors border-2 border-black">
+                ACESSAR ARQUIVO
+            </button>
+            
+            <div id="connection-status" class="mt-4 p-2 bg-yellow-100 border border-yellow-400 text-yellow-800 text-xs hidden text-left font-mono">
+                <strong>STATUS:</strong> <span id="error-details">Conectando...</span>
+            </div>
+        </div>
+
+        <!-- TELA 2: LOBBY -->
+        <div id="screen-lobby" class="hidden paper-texture w-full p-6 rounded shadow-2xl fade-in flex flex-col md:flex-row gap-6">
+            <!-- Lista de Jogadores -->
+            <div class="flex-1">
+                <div class="flex justify-between items-start mb-4">
+                    <h2 class="text-2xl title-font flex items-center gap-2">
+                        <span class="stamp text-sm rotate-0 border-2">SALA: <span id="lobby-room-code">----</span></span>
+                    </h2>
+                    <div class="text-xs text-gray-500 max-w-[150px] text-right">Compartilhe este código com seus amigos</div>
+                </div>
+                
+                <h3 class="font-bold mb-2">AGENTES CONECTADOS:</h3>
+                <ul id="lobby-player-list" class="space-y-2 font-mono text-lg border-2 border-dashed border-gray-400 p-4 min-h-[200px]">
+                    <li class="text-gray-500 italic">Aguardando conexão...</li>
+                </ul>
+            </div>
+            
+            <!-- Controles do Lobby -->
+            <div class="w-full md:w-1/3 flex flex-col justify-center border-l-2 border-gray-400 pl-6 border-dashed">
+                <div class="bg-yellow-100 p-4 border border-yellow-300 mb-6 text-sm">
+                    <strong>INSTRUÇÕES (MODO DEV):</strong><br>
+                    Limite removido para testes.<br>
+                    Mínimo: 1 Agente.<br>
+                    Objetivo: 40 Pontos.<br>
+                    <span class="text-red-800 text-xs">Dica: Abra 2 abas para testar o fluxo.</span>
+                </div>
+                <button onclick="requestStartGame()" class="w-full bg-red-900 text-white py-4 font-bold text-xl tracking-widest hover:bg-red-800 shadow-lg border-2 border-black">
+                    INICIAR MISSÃO
+                </button>
+            </div>
+        </div>
+
+        <!-- TELA 3: JOGO (TABULEIRO) -->
+        <div id="screen-game" class="hidden w-full flex flex-col gap-4 fade-in">
+            
+            <!-- BARRA DE STATUS SUPERIOR -->
+            <div class="paper-texture p-3 flex justify-between items-center rounded border-b-4 border-red-900">
+                <div>
+                    <span class="text-xs text-gray-500 block">TESTEMUNHA ATUAL</span>
+                    <span id="current-witness-name" class="text-xl font-bold title-font text-red-900">...</span>
+                </div>
+                <div class="text-center">
+                    <span class="text-xs text-gray-500 block">FASE</span>
+                    <span id="game-phase-display" class="font-bold bg-black text-white px-3 py-1 text-sm rounded">...</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-xs text-gray-500 block">SEUS PONTOS</span>
+                    <span id="my-score" class="text-2xl font-bold title-font">0</span>
+                    <span class="text-[10px] text-gray-600">/ 40</span>
+                </div>
+            </div>
+
+            <!-- ÁREA DE EVIDÊNCIAS -->
+            <div id="evidence-display" class="hidden paper-texture p-4 text-center border-2 border-gray-800 relative">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-black text-white px-2 text-xs uppercase tracking-widest">Pistas da Testemunha</div>
+                <div class="flex justify-center gap-4 md:gap-8 items-center mt-2">
+                    <div id="evidence-1" class="text-xl md:text-3xl font-bold title-font border-b-2 border-red-500">?</div>
+                    <div class="text-gray-400 text-lg">&</div>
+                    <div id="evidence-2" class="text-xl md:text-3xl font-bold title-font border-b-2 border-red-500">?</div>
+                </div>
+            </div>
+
+            <!-- ÁREA CENTRAL DE AÇÃO -->
+            <div id="action-area" class="flex-grow min-h-[400px] flex flex-col relative">
+                
+                <!-- CONTAINER DE MENSAGENS / WAIT -->
+                <div id="msg-container" class="absolute inset-0 flex items-center justify-center bg-black/50 z-20 hidden text-center p-4">
+                    <div class="bg-white p-6 rounded shadow-xl max-w-md border-4 border-gray-800">
+                        <h3 id="msg-title" class="text-xl font-bold mb-2">Aguarde...</h3>
+                        <p id="msg-body" class="text-gray-600">Outros agentes estão analisando as evidências.</p>
+                        <div class="mt-4 animate-pulse text-red-800 font-mono">ENCRIPTANDO DADOS...</div>
+                    </div>
+                </div>
+
+                <!-- ÁREA: SELEÇÃO DE CARTAS (Mão do Jogador) -->
+                <div id="hand-area" class="hidden">
+                    <h3 class="text-white text-center mb-2 text-sm tracking-widest uppercase bg-black/50 p-1">Sua Mão (Selecione <span id="hand-instruction">uma carta</span>)</h3>
+                    <div id="my-hand-grid" class="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-4 p-2 overflow-x-auto">
+                        <!-- Cartas geradas via JS -->
+                    </div>
+                </div>
+
+                <!-- ÁREA: SELEÇÃO DE PALAVRAS (Só para Testemunha) -->
+                <div id="word-selection-area" class="hidden paper-texture p-4 mt-2">
+                    <h3 class="text-center font-bold mb-2">SELECIONE 2 PALAVRAS DO ARQUIVO</h3>
+                    <div id="word-grid" class="grid grid-cols-3 md:grid-cols-5 gap-2 max-h-[200px] overflow-y-auto p-2 border border-gray-400">
+                        <!-- Palavras geradas via JS -->
+                    </div>
+                    <button onclick="confirmWitnessPlay()" id="btn-confirm-witness" disabled class="w-full mt-4 bg-red-900 text-white py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+                        CONFIRMAR EVIDÊNCIAS
+                    </button>
+                </div>
+
+                <!-- ÁREA: MESA DE VOTAÇÃO -->
+                <div id="voting-table" class="hidden p-4">
+                    <h3 class="text-white text-center mb-4 text-xl title-font bg-red-900/80 p-2 rounded">QUEM É A TESTEMUNHA? (VOTE)</h3>
+                    <div id="table-cards-grid" class="flex flex-wrap justify-center gap-4">
+                        <!-- Cartas da mesa -->
+                    </div>
+                </div>
+
+                <!-- ÁREA: PLACAR -->
+                <div id="scoring-board" class="hidden paper-texture p-6 m-auto max-w-2xl w-full border-4 border-double border-gray-800">
+                    <h2 class="text-3xl title-font text-center mb-6">RELATÓRIO DO TURNO</h2>
+                    
+                    <div id="round-results" class="mb-6 space-y-2 font-mono text-sm border-b border-gray-400 pb-4">
+                        <!-- Resultados detalhados -->
+                    </div>
+
+                    <h3 class="font-bold mb-2">PLACAR GERAL:</h3>
+                    <ul id="scoreboard-list" class="space-y-1 mb-8">
+                        <!-- Placar -->
+                    </ul>
+
+                    <button onclick="startNextRound()" class="w-full bg-gray-800 text-white py-3 font-bold hover:bg-gray-700">
+                        PRÓXIMO ARQUIVO >>
+                    </button>
+                </div>
+
+                <!-- ÁREA: FIM DE JOGO -->
+                <div id="game-over-screen" class="hidden paper-texture p-8 m-auto max-w-2xl w-full border-8 border-red-900 shadow-2xl text-center transform rotate-1">
+                    <h1 class="text-5xl title-font text-red-900 mb-2">CASO ENCERRADO</h1>
+                    <div class="text-xl font-bold mb-8">O ARQUIVO FOI SOLUCIONADO</div>
+                    
+                    <div class="bg-black text-white p-6 mb-8 rounded shadow-lg">
+                        <p class="text-sm uppercase tracking-widest text-gray-400 mb-2">Melhor Investigador</p>
+                        <div id="winner-name" class="text-4xl font-bold text-yellow-500 mb-2">AGENTE X</div>
+                        <div id="winner-score" class="text-xl">0 Pontos</div>
+                    </div>
+
+                    <button onclick="resetGameData()" class="px-8 py-4 bg-red-900 text-white font-bold text-lg hover:bg-red-800 border-2 border-black">
+                        NOVO CASO (REINICIAR)
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Módulo JS -->
+    <script type="module">
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc, initializeFirestore, memoryLocalCache } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // === CONFIGURAÇÃO FIREBASE ===
+        const firebaseConfig = {
+            apiKey: "AIzaSyAbddYCH65EHCTRluFHe4FOE6J5z9yBLxw",
+            authDomain: "jogo-arquivo-morto.firebaseapp.com",
+            projectId: "jogo-arquivo-morto",
+            storageBucket: "jogo-arquivo-morto.firebasestorage.app",
+            messagingSenderId: "24019872660",
+            appId: "1:24019872660:web:bda2b9dacc0530f48b7d81"
+        };
+
+        // Verifica protocolo file:// e avisa
+        if (window.location.protocol === 'file:') {
+            document.getElementById('file-protocol-warning').classList.remove('hidden');
+        }
+
+        // === INICIALIZAÇÃO ===
+        const APP_NAME = `ArquivoMorto_Sess_${Date.now()}`;
+        const app = initializeApp(firebaseConfig, APP_NAME);
+        const auth = getAuth(app);
+        
+        let db;
+        try {
+            db = initializeFirestore(app, { localCache: memoryLocalCache() });
+            console.log(`Sistema online: ${APP_NAME}`);
+        } catch (e) {
+            console.warn("Fallback DB", e);
+            db = getFirestore(app);
+        }
+
+        // Variáveis
+        let currentRoomId = null;
+        let docRef = null;
+        let myId = null;
+        let myName = "";
+        let localState = null;
+        let selectedWords = [];
+        let selectedCard = null;
+        let unsubscribeRoom = null;
+        let joinAttempts = 0;
+
+        const TOTAL_CARDS = 60;
+        const WINNING_SCORE = 40;
+        const WORDS_LIST = [
+            "Chuva", "Nevoeiro", "Sombra", "Luz", "Ruído", "Silêncio", "Frio", "Calor", "Poeira", "Cinza", "Ecos", "Escuridão", "Reflexo", "Vazio", "Cheiro",
+            "Sangue", "Vidro", "Metal", "Ferrugem", "Papel", "Chave", "Fio", "Relógio", "Espelho", "Máquina", "Faca", "Veneno", "Dinheiro", "Carta", "Telefone",
+            "Verdade", "Mentira", "Segredo", "Culpa", "Inocência", "Tempo", "Passado", "Futuro", "Destino", "Acaso", "Lei", "Caos", "Poder", "Sonho", "Pesadelo",
+            "Medo", "Raiva", "Desejo", "Vingança", "Fuga", "Busca", "Perda", "Espera", "Queda", "Olhar", "Toque", "Grito", "Sussurro", "Solidão", "Loucura",
+            "Vítima", "Assassino", "Testemunha", "Criança", "Velho", "Mulher", "Homem", "Casa", "Rua", "Prisão", "Hospital", "Floresta", "Mar", "Ponte", "Janela",
+            "Início", "Fim", "Sempre", "Nunca", "Talvez", "Antes", "Depois", "Dentro", "Fora", "Alto", "Baixo", "Rápido", "Lento", "Tudo", "Nada"
+        ];
+
+        window.generateRoomCode = () => {
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+            let code = "";
+            for(let i=0; i<4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+            document.getElementById('room-code-input').value = code;
+        }
+
+        // === JOIN OTIMIZADO (SEM GETDOC BLOQUEANTE) ===
+        window.joinGame = async () => {
+            const name = document.getElementById('player-name-input').value.trim().toUpperCase();
+            const roomCode = document.getElementById('room-code-input').value.trim().toUpperCase();
+            const statusDiv = document.getElementById('error-details');
+            const statusBox = document.getElementById('connection-status');
+
+            if (!name || roomCode.length < 3) { alert("Preencha nome e código."); return; }
+
+            statusBox.classList.remove('hidden');
+            statusDiv.innerText = "Sincronizando via satélite...";
+
+            try {
+                if (!auth.currentUser) await signInAnonymously(auth);
+                myId = auth.currentUser.uid;
+                myName = name;
+                currentRoomId = roomCode;
+
+                docRef = doc(db, 'artifacts', 'jogo-arquivo-morto', 'public', 'data', 'rooms', currentRoomId);
+
+                // --- ESTRATÉGIA OTIMISTA (V8) ---
+                // Não usamos getDoc() aqui pois ele trava se a rede for ruim/bloqueada.
+                // Iniciamos o listener direto. O listener vai nos dizer se a sala existe ou não.
+                
+                if (unsubscribeRoom) unsubscribeRoom();
+                unsubscribeRoom = onSnapshot(docRef, (snap) => {
+                    if (!snap.exists()) {
+                        // Sala não existe: Criar!
+                        createRoom();
+                    } else {
+                        // Sala existe: Entrar se não estiver nela
+                        const data = snap.data();
+                        localState = data;
+                        
+                        const playerExists = data.players.some(p => p.id === myId);
+                        if (!playerExists) {
+                            addSelfToRoom(data.players);
+                        } else {
+                            // Já estou dentro, renderizar
+                            renderGame(localState);
+                        }
+                    }
+                }, (error) => {
+                    console.error("Erro no listener:", error);
+                    statusDiv.innerText = "Falha: " + error.code;
+                    if(error.code === 'unavailable' || error.message.includes('offline')) {
+                        statusDiv.innerText = "Bloqueio de Rede. Use Live Server (VS Code).";
+                    }
+                });
+
+            } catch (e) {
+                console.error("Erro fatal:", e);
+                statusDiv.innerText = "Erro Crítico: " + e.message;
+            }
+        };
+
+        async function createRoom() {
+            const newPlayer = { id: myId, name: myName, score: 0, hand: drawCards(6) };
+            try {
+                await setDoc(docRef, {
+                    phase: 'lobby',
+                    players: [newPlayer],
+                    roundCount: 0,
+                    witnessIndex: 0,
+                    createdAt: new Date().toISOString()
+                });
+                // O onSnapshot vai pegar essa atualização automaticamente
+            } catch(e) {
+                console.error("Erro ao criar sala:", e);
+            }
+        }
+
+        async function addSelfToRoom(currentPlayers) {
+            const newPlayer = { id: myId, name: myName, score: 0, hand: drawCards(6) };
+            const updatedPlayers = [...currentPlayers, newPlayer];
+            try {
+                await updateDoc(docRef, { players: updatedPlayers });
+            } catch(e) {
+                console.error("Erro ao entrar na sala:", e);
+            }
+        }
+
+        // === RENDERIZAÇÃO ===
+        function renderGame(state) {
+            if (state.phase === 'lobby') {
+                document.getElementById('lobby-player-list').innerHTML = state.players.map(p => `<li>👮 ${p.name} ${p.id === myId ? '(VOCÊ)' : ''}</li>`).join('');
+                document.getElementById('screen-login').classList.add('hidden');
+                document.getElementById('screen-game').classList.add('hidden');
+                document.getElementById('screen-lobby').classList.remove('hidden');
+                document.getElementById('lobby-room-code').innerText = currentRoomId;
+                return;
+            }
+
+            // JOGO
+            document.getElementById('screen-login').classList.add('hidden');
+            document.getElementById('screen-lobby').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+
+            const witness = state.players[state.witnessIndex];
+            document.getElementById('current-witness-name').innerText = witness ? witness.name : "Ninguém";
+            
+            const me = state.players.find(p => p.id === myId);
+            if(me) document.getElementById('my-score').innerText = me.score;
+
+            const isWitness = (witness && myId === witness.id);
+            const phaseDisplay = document.getElementById('game-phase-display');
+
+            // Reset Visibilidade
+            ['hand-area', 'word-selection-area', 'msg-container', 'voting-table', 'scoring-board', 'evidence-display', 'game-over-screen']
+                .forEach(id => document.getElementById(id).classList.add('hidden'));
+
+            if (state.phase === 'game_over') {
+                phaseDisplay.innerText = "FIM";
+                document.getElementById('game-over-screen').classList.remove('hidden');
+                document.getElementById('action-area').classList.add('flex-col-reverse');
+                if (state.winner) {
+                    document.getElementById('winner-name').innerText = state.winner.name;
+                    document.getElementById('winner-score').innerText = `${state.winner.score} Pontos`;
+                }
+                return;
+            }
+
+            if (state.phase === 'witness_setup') {
+                phaseDisplay.innerText = "DEPOIMENTO";
+                if (isWitness) {
+                    document.getElementById('hand-area').classList.remove('hidden');
+                    document.getElementById('hand-instruction').innerText = "A CARTA SECRETA";
+                    document.getElementById('word-selection-area').classList.remove('hidden');
+                    renderHand(me.hand, true);
+                    renderWords();
+                } else {
+                    showMsg("Interrogatório", `${witness.name} está analisando os arquivos...`);
+                }
+            } else if (state.phase === 'detective_play') {
+                phaseDisplay.innerText = "INVESTIGAÇÃO";
+                showEvidence(state.currentWords);
+                if (isWitness) {
+                    showMsg("Aguardando", "Os detetives estão escolhendo cartas falsas...");
+                } else {
+                    if (state.playedThisRound.includes(myId)) {
+                        showMsg("Evidência Enviada", "Aguardando os outros detetives.");
+                    } else {
+                        document.getElementById('hand-area').classList.remove('hidden');
+                        document.getElementById('hand-instruction').innerText = "UMA CARTA PARA CONFUNDIR";
+                        renderHand(me.hand, true);
+                    }
+                }
+            } else if (state.phase === 'voting') {
+                phaseDisplay.innerText = "VOTAÇÃO";
+                showEvidence(state.currentWords);
+                document.getElementById('voting-table').classList.remove('hidden');
+                if (isWitness) {
+                    renderVotingTable(state.tableCards, false, null);
+                    showMsg("Observando", "Você não vota neste turno.");
+                    document.getElementById('msg-container').style.backgroundColor = "rgba(0,0,0,0.1)";
+                    document.getElementById('msg-container').style.pointerEvents = "none";
+                } else {
+                    if (state.votes && state.votes[myId]) {
+                        showMsg("Voto Registrado", "Aguardando apuração...");
+                        renderVotingTable(state.tableCards, false, null);
+                    } else {
+                        const myCardId = state.tableCards.find(c => c.owner === myId)?.cardId;
+                        renderVotingTable(state.tableCards, true, myCardId);
+                    }
+                }
+            } else if (state.phase === 'scoring') {
+                phaseDisplay.innerText = "RELATÓRIO";
+                showEvidence(state.currentWords);
+                document.getElementById('scoring-board').classList.remove('hidden');
+                renderScoreboard(state);
+            }
+        }
+
+        function showMsg(title, body) {
+            const el = document.getElementById('msg-container');
+            el.classList.remove('hidden');
+            el.style.backgroundColor = "rgba(0,0,0,0.8)";
+            el.style.pointerEvents = "auto";
+            document.getElementById('msg-title').innerText = title;
+            document.getElementById('msg-body').innerText = body;
+        }
+
+        function showEvidence(words) {
+            document.getElementById('evidence-display').classList.remove('hidden');
+            if(words && words.length >= 2) {
+                document.getElementById('evidence-1').innerText = words[0];
+                document.getElementById('evidence-2').innerText = words[1];
+            }
+        }
+
+        function renderHand(cardIds, clickable) {
+            const grid = document.getElementById('my-hand-grid');
+            grid.innerHTML = '';
+            cardIds.forEach(num => {
+                const url = `https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/${num}.png?raw=true`;
+                const div = document.createElement('div');
+                div.className = `card-frame rounded overflow-hidden aspect-[2/3] bg-gray-800 border-2 ${selectedCard === num ? 'card-selected' : 'border-gray-600'}`;
+                div.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+                if (clickable) {
+                    div.onclick = () => {
+                        selectedCard = num;
+                        renderHand(cardIds, true);
+                        if (localState.phase === 'witness_setup') checkWitnessReady();
+                        if (localState.phase === 'detective_play') submitDetectiveCard(num);
+                    };
+                }
+                grid.appendChild(div);
+            });
+        }
+
+        function renderWords() {
+            const grid = document.getElementById('word-grid');
+            if (grid.children.length > 0) return;
+            WORDS_LIST.forEach(word => {
+                const btn = document.createElement('button');
+                btn.className = "text-xs p-1 bg-gray-200 hover:bg-yellow-200 border border-gray-400";
+                btn.innerText = word;
+                btn.onclick = () => {
+                    if (selectedWords.includes(word)) {
+                        selectedWords = selectedWords.filter(w => w !== word);
+                        btn.classList.remove('bg-red-800', 'text-white');
+                        btn.classList.add('bg-gray-200', 'text-black');
+                    } else if (selectedWords.length < 2) {
+                        selectedWords.push(word);
+                        btn.classList.remove('bg-gray-200', 'text-black');
+                        btn.classList.add('bg-red-800', 'text-white');
+                    }
+                    checkWitnessReady();
+                };
+                grid.appendChild(btn);
+            });
+        }
+
+        function checkWitnessReady() {
+            const btn = document.getElementById('btn-confirm-witness');
+            btn.disabled = !(selectedCard && selectedWords.length === 2);
+        }
+
+        function renderVotingTable(cards, canVote, myOwnCardId) {
+            const grid = document.getElementById('table-cards-grid');
+            grid.innerHTML = '';
+            cards.forEach(cardObj => {
+                const url = `https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/${cardObj.cardId}.png?raw=true`;
+                const div = document.createElement('div');
+                const isMine = (cardObj.cardId === myOwnCardId);
+                div.className = `relative card-frame w-24 md:w-32 rounded overflow-hidden shadow-lg border-2 ${isMine ? 'border-yellow-500 opacity-80' : 'border-gray-200'}`;
+                div.innerHTML = `
+                    <img src="${url}" class="w-full h-full object-cover">
+                    ${isMine ? '<div class="absolute bottom-0 w-full bg-yellow-500 text-black text-xs font-bold text-center">SUA CARTA</div>' : ''}
+                `;
+                if (canVote && !isMine) {
+                    div.onclick = () => submitVote(cardObj.owner); 
+                } else if (isMine) {
+                    div.style.cursor = 'not-allowed';
+                }
+                grid.appendChild(div);
+            });
+        }
+
+        function renderScoreboard(state) {
+            const list = document.getElementById('scoreboard-list');
+            const sorted = [...state.players].sort((a,b) => b.score - a.score);
+            list.innerHTML = sorted.map((p, i) => 
+                `<li class="flex justify-between border-b border-dashed border-gray-400 py-1">
+                    <span>${i+1}. ${p.name}</span>
+                    <span class="font-bold text-red-900">${p.score} pts</span>
+                 </li>`
+            ).join('');
+            const witness = state.players[state.witnessIndex];
+            document.getElementById('round-results').innerHTML = `
+                <p><strong>A Testemunha:</strong> ${witness ? witness.name : 'N/A'}</p>
+                <p><strong>Palavras:</strong> ${state.currentWords.join(" + ")}</p>
+            `;
+        }
+
+        window.requestStartGame = async () => {
+            // ALTERAÇÃO: MUDADO DE 3 PARA 1 PARA TESTES
+            if (!localState || localState.players.length < 1) {
+                alert("É necessário no mínimo 1 agente.");
+                return;
+            }
+            await updateDoc(docRef, {
+                phase: 'witness_setup',
+                witnessIndex: 0,
+                roundCount: 1,
+                currentWords: [],
+                tableCards: [],
+                votes: {},
+                playedThisRound: []
+            });
+        };
+
+        window.confirmWitnessPlay = async () => {
+            if (!selectedCard || selectedWords.length !== 2) return;
+            const me = localState.players.find(p => p.id === myId);
+            const newHand = me.hand.filter(c => c !== selectedCard);
+            const updatedPlayers = localState.players.map(p => p.id === myId ? { ...p, hand: newHand } : p);
+
+            await updateDoc(docRef, {
+                currentWords: selectedWords,
+                tableCards: [{ cardId: selectedCard, owner: myId }], 
+                players: updatedPlayers,
+                playedThisRound: [myId],
+                phase: 'detective_play'
+            });
+            selectedCard = null; selectedWords = [];
+        };
+
+        window.submitDetectiveCard = async (cardId) => {
+            if(!confirm("Confirmar essa carta?")) return;
+            const me = localState.players.find(p => p.id === myId);
+            const newHand = me.hand.filter(c => c !== cardId);
+            const updatedPlayers = localState.players.map(p => p.id === myId ? { ...p, hand: newHand } : p);
+            
+            const newTableCards = [...localState.tableCards, { cardId: cardId, owner: myId }];
+            const newPlayedList = [...localState.playedThisRound, myId];
+            const allPlayed = (newPlayedList.length === localState.players.length);
+
+            let updates = { players: updatedPlayers, tableCards: newTableCards, playedThisRound: newPlayedList };
+            if (allPlayed) {
+                updates.phase = 'voting';
+                updates.tableCards = newTableCards.sort(() => Math.random() - 0.5);
+            }
+            await updateDoc(docRef, updates);
+            selectedCard = null;
+        };
+
+        window.submitVote = async (targetOwnerId) => {
+            if (!confirm("Confirmar voto?")) return;
+            const currentVotes = localState.votes || {};
+            currentVotes[myId] = targetOwnerId;
+            const detectiveCount = localState.players.length - 1;
+            
+            if (Object.keys(currentVotes).length >= detectiveCount) {
+                calculateScores(currentVotes);
+            } else {
+                await updateDoc(docRef, { votes: currentVotes });
+            }
+        };
+
+        async function calculateScores(finalVotes) {
+            const players = [...localState.players];
+            const witness = players[localState.witnessIndex];
+            const detectives = players.filter(p => p.id !== witness.id);
+            let witnessVotes = 0;
+            
+            Object.values(finalVotes).forEach(targetId => {
+                if (targetId === witness.id) witnessVotes++;
+            });
+
+            if (witnessVotes === detectives.length || witnessVotes === 0) {
+                detectives.forEach(d => { players.find(p => p.id === d.id).score += 2; });
+                if (witnessVotes === 0) {
+                     Object.values(finalVotes).forEach(targetId => {
+                        const target = players.find(p => p.id === targetId);
+                        if (target && target.id !== witness.id) target.score += 1;
+                    });
+                }
+            } else {
+                witness.score += 3;
+                Object.entries(finalVotes).forEach(([voterId, targetId]) => {
+                    if (targetId === witness.id) {
+                        const d = players.find(p => p.id === voterId);
+                        if(d) d.score += 3;
+                    } else {
+                        const target = players.find(p => p.id === targetId);
+                        if (target) target.score += 1;
+                    }
+                });
+            }
+
+            players.forEach(p => { p.hand.push(drawCards(1)[0]); });
+
+            const sorted = [...players].sort((a,b) => b.score - a.score);
+            if (sorted[0].score >= WINNING_SCORE) {
+                await updateDoc(docRef, { players: players, votes: finalVotes, phase: 'game_over', winner: sorted[0] });
+            } else {
+                await updateDoc(docRef, { players: players, votes: finalVotes, phase: 'scoring' });
+            }
+        }
+
+        window.startNextRound = async () => {
+            let nextIndex = localState.witnessIndex + 1;
+            if (nextIndex >= localState.players.length) nextIndex = 0;
+            await updateDoc(docRef, {
+                phase: 'witness_setup',
+                witnessIndex: nextIndex,
+                roundCount: localState.roundCount + 1,
+                currentWords: [],
+                tableCards: [],
+                votes: {},
+                playedThisRound: []
+            });
+        };
+
+        window.resetGameData = async () => {
+            if(!confirm("Reiniciar jogo?")) return;
+            await setDoc(docRef, { phase: 'lobby', players: [], roundCount: 0 });
+            window.location.reload();
+        }
+
+        function drawCards(amount) {
+            let cards = [];
+            for(let i=0; i<amount; i++) cards.push(Math.floor(Math.random() * TOTAL_CARDS) + 1);
+            return cards;
+        }
+
+        window.toggleAudio = function() {
+            const audio = document.getElementById('bg-music');
+            if (audio.paused) audio.play();
+            else audio.pause();
+        };
+
+        generateRoomCode();
+    </script>
+</body>
 </html>
