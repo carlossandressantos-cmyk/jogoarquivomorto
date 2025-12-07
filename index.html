@@ -46,6 +46,14 @@
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #333; }
         ::-webkit-scrollbar-thumb { background: #666; border-radius: 4px; }
+
+        /* Modal de Regras */
+        .marker-highlight {
+            background: linear-gradient(120deg, #f6e05e88 0%, #f6e05e88 100%);
+            background-repeat: no-repeat;
+            background-size: 100% 40%;
+            background-position: 0 80%;
+        }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center p-4 bg-[url('https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/fundo-site.png?raw=true')] bg-cover bg-fixed bg-center">
@@ -70,6 +78,63 @@
     <!-- ÁREA PRINCIPAL DO JOGO -->
     <main id="game-app" class="w-full max-w-5xl min-h-[600px] relative">
         
+        <!-- MODAL: MANUAL DE REGRAS (NOVO) -->
+        <div id="rules-modal" class="hidden fixed inset-0 bg-black/95 z-[60] overflow-y-auto p-4 flex items-center justify-center fade-in">
+            <div class="bg-white max-w-3xl w-full p-8 rounded paper-texture relative border-4 border-gray-800 shadow-2xl">
+                <button onclick="hideRules()" class="absolute top-4 right-4 text-2xl font-bold hover:text-red-600">X</button>
+                
+                <h2 class="text-3xl title-font text-center mb-6 text-red-900 border-b-2 border-gray-800 pb-2">MANUAL DE PROTOCOLO</h2>
+                
+                <div class="space-y-6 text-gray-900 overflow-y-auto max-h-[70vh] pr-2 text-sm md:text-base leading-relaxed">
+                    
+                    <div>
+                        <h3 class="font-bold text-lg bg-gray-300 inline-block px-2 mb-2">1. O OBJETIVO</h3>
+                        <p>Desvendar a imagem correta baseada nas pistas vagas deixadas pela Testemunha. O primeiro investigador a atingir <strong class="marker-highlight">25 Pontos</strong> encerra o caso e vence.</p>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="bg-gray-100 p-3 border border-gray-400">
+                            <h4 class="font-bold text-red-900">👁️ A TESTEMUNHA (1 Jogador)</h4>
+                            <p class="text-xs mt-1">Sabe a verdade. Deve dar pistas que não sejam nem muito fáceis (todos acertam), nem muito difíceis (ninguém acerta).</p>
+                        </div>
+                        <div class="bg-gray-100 p-3 border border-gray-400">
+                            <h4 class="font-bold text-blue-900">🕵️ OS DETETIVES (Outros)</h4>
+                            <p class="text-xs mt-1">Devem encontrar a carta da Testemunha e jogar cartas falsas para confundir os rivais.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-lg bg-gray-300 inline-block px-2 mb-2">2. COMO JOGAR (O FLUXO)</h3>
+                        <ul class="list-decimal list-inside space-y-3">
+                            <li><strong>FASE 1: O Depoimento (Testemunha)</strong><br>
+                                A Testemunha escolhe secretamente uma carta de sua mão e seleciona <span class="font-bold">2 Palavras</span> (Pistas) que descrevam essa imagem.
+                            </li>
+                            <li><strong>FASE 2: A Investigação (Detetives)</strong><br>
+                                Os Detetives veem as 2 palavras. Eles devem escolher de sua própria mão uma carta que <span class="italic">também combine</span> com essas palavras para enganar os outros.
+                            </li>
+                            <li><strong>FASE 3: O Veredito (Votação)</strong><br>
+                                Todas as cartas (da Testemunha e dos Detetives) são embaralhadas e reveladas na mesa. Os Detetives devem votar em qual carta acham que é a da Testemunha. <em class="text-xs text-red-600">(Você não pode votar na sua própria carta).</em>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="font-bold text-lg bg-gray-300 inline-block px-2 mb-2">3. PONTUAÇÃO (O RELATÓRIO)</h3>
+                        <ul class="space-y-2 text-sm border-l-4 border-gray-800 pl-4">
+                            <li>✅ <strong>Se o Detetive acertar a carta da Testemunha:</strong> Ganha <span class="marker-highlight font-bold">+3 Pontos</span>.</li>
+                            <li>🎭 <strong>Se um Detetive enganar outro (alguém vota na carta falsa dele):</strong> O dono da carta falsa ganha <span class="font-bold">+1 Ponto</span> por voto recebido.</li>
+                            <li>⚖️ <strong>A Testemunha Pontua se:</strong> Pelo menos um (mas não todos) acertar sua carta. Ela ganha <span class="font-bold">+3 Pontos</span>.</li>
+                            <li>❌ <strong>A Testemunha perde (0 pts) se:</strong> TODOS acertarem (foi óbvio demais) ou NINGUÉM acertar (foi difícil demais). Nesse caso, todos os detetives ganham +2 pontos extras (Bônus de Incompetência).</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mt-6 text-center">
+                    <button onclick="hideRules()" class="bg-red-900 text-white px-8 py-3 font-bold border-2 border-black hover:bg-red-800">ENTENDIDO, AGENTE.</button>
+                </div>
+            </div>
+        </div>
+
         <!-- TELA 1: LOGIN E SELEÇÃO DE SALA -->
         <div id="screen-login" class="paper-texture max-w-md mx-auto p-8 rounded shadow-2xl mt-10 text-center fade-in">
             <h2 class="text-2xl title-font mb-6 border-b-2 border-gray-800 pb-2">Identificação</h2>
@@ -101,8 +166,13 @@
                 </div>
             </div>
 
-            <button onclick="joinGame()" class="w-full bg-red-900 text-white py-3 font-bold tracking-widest hover:bg-red-800 transition-colors border-2 border-black">
+            <button onclick="joinGame()" class="w-full bg-red-900 text-white py-3 font-bold tracking-widest hover:bg-red-800 transition-colors border-2 border-black mb-3">
                 ACESSAR ARQUIVO
+            </button>
+
+            <!-- Botão Manual no Login -->
+            <button onclick="showRules()" class="w-full bg-gray-700 text-white py-2 text-xs font-bold tracking-widest hover:bg-gray-600 border border-gray-500">
+                📖 COMO JOGAR
             </button>
             
             <div id="connection-status" class="mt-4 p-2 bg-yellow-100 border border-yellow-400 text-yellow-800 text-xs hidden text-left font-mono">
@@ -130,12 +200,15 @@
             <!-- Controles do Lobby -->
             <div class="w-full md:w-1/3 flex flex-col justify-center border-l-2 border-gray-400 pl-6 border-dashed">
                 <div class="bg-yellow-100 p-4 border border-yellow-300 mb-6 text-sm">
-                    <strong>INSTRUÇÕES (MODO DEV):</strong><br>
-                    Limite removido para testes.<br>
+                    <strong>INSTRUÇÕES:</strong><br>
                     Mínimo: 1 Agente.<br>
-                    Objetivo: 40 Pontos.<br>
-                    <span class="text-red-800 text-xs">Dica: Se usar o Firebase real, os jogadores se conectarão entre computadores diferentes.</span>
+                    Objetivo: 25 Pontos.<br>
                 </div>
+                
+                <button onclick="showRules()" class="w-full mb-3 bg-gray-700 text-white py-3 font-bold hover:bg-gray-600 border-2 border-gray-900">
+                    MANUAL DO AGENTE
+                </button>
+
                 <button onclick="requestStartGame()" class="w-full bg-red-900 text-white py-4 font-bold text-xl tracking-widest hover:bg-red-800 shadow-lg border-2 border-black">
                     INICIAR MISSÃO
                 </button>
@@ -158,7 +231,7 @@
                 <div class="text-right">
                     <span class="text-xs text-gray-500 block">SEUS PONTOS</span>
                     <span id="my-score" class="text-2xl font-bold title-font">0</span>
-                    <span class="text-[10px] text-gray-600">/ 40</span>
+                    <span class="text-[10px] text-gray-600">/ 25</span>
                 </div>
             </div>
 
@@ -323,6 +396,14 @@
             let code = "";
             for(let i=0; i<4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
             document.getElementById('room-code-input').value = code;
+        }
+
+        // Funções do Modal de Regras
+        window.showRules = () => {
+            document.getElementById('rules-modal').classList.remove('hidden');
+        }
+        window.hideRules = () => {
+            document.getElementById('rules-modal').classList.add('hidden');
         }
 
         // === JOIN OTIMIZADO ===
