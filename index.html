@@ -80,6 +80,12 @@
                 <span class="block mt-1">Solução: Use a extensão <strong>"Live Server"</strong> no VS Code ou hospede no Vercel/GitHub Pages.</span>
             </div>
 
+            <!-- Aviso de Configuração Faltante (JavaScript vai ativar se necessário) -->
+            <div id="config-warning" class="hidden mb-4 p-3 bg-yellow-100 border-l-4 border-yellow-600 text-yellow-900 text-xs text-left font-mono">
+                <strong>ATENÇÃO:</strong> As chaves do Firebase parecem ser as de exemplo.<br>
+                Para jogar online com amigos, você precisa criar seu próprio projeto no <a href="https://console.firebase.google.com" target="_blank" class="underline font-bold">Firebase Console</a> e colar as chaves no código.
+            </div>
+
             <!-- Nome -->
             <div class="mb-4">
                 <label class="block text-sm font-bold mb-2 text-left">NOME DO AGENTE:</label>
@@ -128,7 +134,7 @@
                     Limite removido para testes.<br>
                     Mínimo: 1 Agente.<br>
                     Objetivo: 40 Pontos.<br>
-                    <span class="text-red-800 text-xs">Dica: Abra 2 abas para testar o fluxo.</span>
+                    <span class="text-red-800 text-xs">Dica: Se usar o Firebase real, os jogadores se conectarão entre computadores diferentes.</span>
                 </div>
                 <button onclick="requestStartGame()" class="w-full bg-red-900 text-white py-4 font-bold text-xl tracking-widest hover:bg-red-800 shadow-lg border-2 border-black">
                     INICIAR MISSÃO
@@ -251,15 +257,24 @@
         import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc, initializeFirestore, memoryLocalCache } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // === CONFIGURAÇÃO FIREBASE ===
-        // Dividindo a chave para enganar o scanner de segredos do Netlify/GitHub
+        // ----------------------------------------------------------------------------------
+        // ATENÇÃO: PARA O JOGO FUNCIONAR ONLINE (MULTIPLAYER ENTRE AMIGOS),
+        // VOCÊ PRECISA CRIAR UM PROJETO NO FIREBASE E COLAR SUAS CHAVES AQUI EMBAIXO.
+        // ----------------------------------------------------------------------------------
+        
         const firebaseConfig = {
-            apiKey: "AIza" + "SyAbddYCH65EHCTRluFHe4FOE6J5z9yBLxw",
-            authDomain: "jogo-arquivo-morto.firebaseapp.com",
-            projectId: "jogo-arquivo-morto",
-            storageBucket: "jogo-arquivo-morto.firebasestorage.app",
-            messagingSenderId: "24019872660",
-            appId: "1:24019872660:web:bda2b9dacc0530f48b7d81"
+            apiKey: "AIza" + "SyBcxWA_okoi5ywIThSmqX4VDWdJ59KXHDg",
+            authDomain: "meu-arquivo-morto.firebaseapp.com",
+            projectId: "meu-arquivo-morto",
+            storageBucket: "meu-arquivo-morto.firebasestorage.app",
+            messagingSenderId: "786003168874",
+            appId: "1:786003168874:web:273c793ba59df0c0818413"
         };
+        
+        // Verifica se ainda está com a config de exemplo e avisa na tela
+        if (firebaseConfig.projectId === "jogo-arquivo-morto") {
+            document.getElementById('config-warning').classList.remove('hidden');
+        }
 
         // Verifica protocolo file:// e avisa
         if (window.location.protocol === 'file:') {
@@ -267,16 +282,17 @@
         }
 
         // === INICIALIZAÇÃO ===
-        const APP_NAME = `ArquivoMorto_Sess_${Date.now()}`;
-        const app = initializeApp(firebaseConfig, APP_NAME);
+        // Verifica se já existe um app inicializado para evitar erros de duplicidade
+        const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
         const auth = getAuth(app);
         
         let db;
         try {
+            // Tenta inicializar com persistência simples
             db = initializeFirestore(app, { localCache: memoryLocalCache() });
-            console.log(`Sistema online: ${APP_NAME}`);
+            console.log("Sistema online");
         } catch (e) {
-            console.warn("Fallback DB", e);
+            // Se falhar (ex: app já inicializado), pega a instância existente
             db = getFirestore(app);
         }
 
@@ -309,7 +325,7 @@
             document.getElementById('room-code-input').value = code;
         }
 
-        // === JOIN OTIMIZADO (SEM GETDOC BLOQUEANTE) ===
+        // === JOIN OTIMIZADO ===
         window.joinGame = async () => {
             const name = document.getElementById('player-name-input').value.trim().toUpperCase();
             const roomCode = document.getElementById('room-code-input').value.trim().toUpperCase();
@@ -329,10 +345,7 @@
 
                 docRef = doc(db, 'artifacts', 'jogo-arquivo-morto', 'public', 'data', 'rooms', currentRoomId);
 
-                // --- ESTRATÉGIA OTIMISTA (V8) ---
-                // Não usamos getDoc() aqui pois ele trava se a rede for ruim/bloqueada.
-                // Iniciamos o listener direto. O listener vai nos dizer se a sala existe ou não.
-                
+                // Listener em Tempo Real
                 if (unsubscribeRoom) unsubscribeRoom();
                 unsubscribeRoom = onSnapshot(docRef, (snap) => {
                     if (!snap.exists()) {
@@ -347,15 +360,16 @@
                         if (!playerExists) {
                             addSelfToRoom(data.players);
                         } else {
-                            // Já estou dentro, renderizar
                             renderGame(localState);
                         }
                     }
                 }, (error) => {
                     console.error("Erro no listener:", error);
-                    statusDiv.innerText = "Falha: " + error.code;
-                    if(error.code === 'unavailable' || error.message.includes('offline')) {
-                        statusDiv.innerText = "Bloqueio de Rede. Use Live Server (VS Code).";
+                    // Mensagem de erro amigável para problema de permissão/configuração
+                    if (error.code === 'permission-denied' || error.code === 'unavailable') {
+                        statusDiv.innerHTML = `<span class='font-bold text-red-600'>ERRO DE CONEXÃO:</span><br>O jogo não conseguiu acessar o banco de dados.<br>1. Verifique se você configurou o "firebaseConfig" corretamente.<br>2. Verifique se o banco Firestore está criado no "Modo de Teste".`;
+                    } else {
+                        statusDiv.innerText = "Falha: " + error.code;
                     }
                 });
 
@@ -375,9 +389,8 @@
                     witnessIndex: 0,
                     createdAt: new Date().toISOString()
                 });
-                // O onSnapshot vai pegar essa atualização automaticamente
             } catch(e) {
-                console.error("Erro ao criar sala:", e);
+                console.error("Erro ao criar sala. Verifique permissões do Firestore:", e);
             }
         }
 
