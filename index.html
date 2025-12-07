@@ -34,6 +34,11 @@
             transform: scale(1.05);
             box-shadow: 0 0 15px rgba(185, 28, 28, 0.6);
         }
+        .card-disabled {
+            filter: grayscale(100%) opacity(50%);
+            pointer-events: none;
+            cursor: not-allowed;
+        }
         
         /* Botões e Inputs */
         input:focus { outline: none; border-color: #b91c1c; }
@@ -110,10 +115,10 @@
                                 A Testemunha escolhe secretamente uma carta de sua mão e seleciona <span class="font-bold">2 Palavras</span> (Pistas) que descrevam essa imagem.
                             </li>
                             <li><strong>FASE 2: A Investigação (Detetives)</strong><br>
-                                Os Detetives veem as 2 palavras. Eles devem escolher de sua própria mão uma carta que <span class="italic">também combine</span> com essas palavras para enganar os outros.
+                                Os Detetives veem as 2 palavras. Eles devem escolher de sua própria mão uma carta que <span class="italic">também combine</span> com essas palavras para enganar os outros. <strong class="text-red-800">Cuidado: Depois de jogar a carta, não é possível trocar!</strong>
                             </li>
                             <li><strong>FASE 3: O Veredito (Votação)</strong><br>
-                                Todas as cartas (da Testemunha e dos Detetives) são embaralhadas e reveladas na mesa. Os Detetives devem votar em qual carta acham que é a da Testemunha. <em class="text-xs text-red-600">(Você não pode votar na sua própria carta).</em>
+                                Todas as cartas são reveladas. Os Detetives devem votar em qual carta acham que é a da Testemunha.
                             </li>
                         </ul>
                     </div>
@@ -122,9 +127,8 @@
                         <h3 class="font-bold text-lg bg-gray-300 inline-block px-2 mb-2">3. PONTUAÇÃO (O RELATÓRIO)</h3>
                         <ul class="space-y-2 text-sm border-l-4 border-gray-800 pl-4">
                             <li>✅ <strong>Se o Detetive acertar a carta da Testemunha:</strong> Ganha <span class="marker-highlight font-bold">+3 Pontos</span>.</li>
-                            <li>🎭 <strong>Se um Detetive enganar outro (alguém vota na carta falsa dele):</strong> O dono da carta falsa ganha <span class="font-bold">+1 Ponto</span> por voto recebido.</li>
+                            <li>🎭 <strong>Se um Detetive enganar outro:</strong> Ganha <span class="font-bold">+1 Ponto</span> por voto recebido.</li>
                             <li>⚖️ <strong>A Testemunha Pontua se:</strong> Pelo menos um (mas não todos) acertar sua carta. Ela ganha <span class="font-bold">+3 Pontos</span>.</li>
-                            <li>❌ <strong>A Testemunha perde (0 pts) se:</strong> TODOS acertarem (foi óbvio demais) ou NINGUÉM acertar (foi difícil demais). Nesse caso, todos os detetives ganham +2 pontos extras (Bônus de Incompetência).</li>
                         </ul>
                     </div>
                 </div>
@@ -271,9 +275,16 @@
                     <div id="word-grid" class="grid grid-cols-3 md:grid-cols-5 gap-2 max-h-[200px] overflow-y-auto p-2 border border-gray-400">
                         <!-- Palavras geradas via JS -->
                     </div>
-                    <button onclick="confirmWitnessPlay()" id="btn-confirm-witness" disabled class="w-full mt-4 bg-red-900 text-white py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed">
-                        CONFIRMAR EVIDÊNCIAS
-                    </button>
+                    
+                    <!-- BOTÕES DE AÇÃO: LIMPAR E CONFIRMAR (NOVO) -->
+                    <div class="flex gap-2 mt-4">
+                        <button onclick="clearWordSelection()" class="w-1/3 bg-gray-600 text-white py-2 font-bold hover:bg-gray-500 border-2 border-black tracking-widest text-xs md:text-sm">
+                            LIMPAR
+                        </button>
+                        <button onclick="confirmWitnessPlay()" id="btn-confirm-witness" disabled class="w-2/3 bg-red-900 text-white py-2 font-bold disabled:opacity-50 disabled:cursor-not-allowed border-2 border-black tracking-widest text-xs md:text-sm">
+                            CONFIRMAR
+                        </button>
+                    </div>
                 </div>
 
                 <!-- ÁREA: MESA DE VOTAÇÃO -->
@@ -290,6 +301,14 @@
                     
                     <div id="round-results" class="mb-6 space-y-2 font-mono text-sm border-b border-gray-400 pb-4">
                         <!-- Resultados detalhados -->
+                    </div>
+
+                    <!-- Visualização das Cartas Reveladas (NOVO) -->
+                    <div class="mb-6">
+                        <h4 class="font-bold mb-2 text-sm text-center bg-black text-white p-1">CARTAS REVELADAS</h4>
+                        <div id="revealed-cards-grid" class="flex flex-wrap justify-center gap-2">
+                            <!-- Injetado via JS -->
+                        </div>
                     </div>
 
                     <h3 class="font-bold mb-2">PLACAR GERAL:</h3>
@@ -327,14 +346,9 @@
     <script type="module">
         import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc, initializeFirestore, memoryLocalCache } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, updateDoc, setDoc, getDoc, runTransaction, initializeFirestore, memoryLocalCache } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         // === CONFIGURAÇÃO FIREBASE ===
-        // ----------------------------------------------------------------------------------
-        // ATENÇÃO: PARA O JOGO FUNCIONAR ONLINE (MULTIPLAYER ENTRE AMIGOS),
-        // VOCÊ PRECISA CRIAR UM PROJETO NO FIREBASE E COLAR SUAS CHAVES AQUI EMBAIXO.
-        // ----------------------------------------------------------------------------------
-        
         const firebaseConfig = {
             apiKey: "AIza" + "SyBcxWA_okoi5ywIThSmqX4VDWdJ59KXHDg",
             authDomain: "meu-arquivo-morto.firebaseapp.com",
@@ -355,17 +369,14 @@
         }
 
         // === INICIALIZAÇÃO ===
-        // Verifica se já existe um app inicializado para evitar erros de duplicidade
         const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
         const auth = getAuth(app);
         
         let db;
         try {
-            // Tenta inicializar com persistência simples
             db = initializeFirestore(app, { localCache: memoryLocalCache() });
             console.log("Sistema online");
         } catch (e) {
-            // Se falhar (ex: app já inicializado), pega a instância existente
             db = getFirestore(app);
         }
 
@@ -381,7 +392,7 @@
         let joinAttempts = 0;
 
         const TOTAL_CARDS = 60;
-        const WINNING_SCORE = 25; // ALTERAÇÃO 1: Meta reduzida para 25 pontos
+        const WINNING_SCORE = 25;
         const WORDS_LIST = [
             "Chuva", "Nevoeiro", "Sombra", "Luz", "Ruído", "Silêncio", "Frio", "Calor", "Poeira", "Cinza", "Ecos", "Escuridão", "Reflexo", "Vazio", "Cheiro",
             "Sangue", "Vidro", "Metal", "Ferrugem", "Papel", "Chave", "Fio", "Relógio", "Espelho", "Máquina", "Faca", "Veneno", "Dinheiro", "Carta", "Telefone",
@@ -398,13 +409,20 @@
             document.getElementById('room-code-input').value = code;
         }
 
-        // Funções do Modal de Regras
-        window.showRules = () => {
-            document.getElementById('rules-modal').classList.remove('hidden');
+        // FUNÇÃO NOVA: LIMPAR PALAVRAS SELECIONADAS
+        window.clearWordSelection = () => {
+            selectedWords = [];
+            const grid = document.getElementById('word-grid');
+            // Reseta o visual de todos os botões
+            Array.from(grid.children).forEach(btn => {
+                btn.classList.remove('bg-red-800', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-black');
+            });
+            checkWitnessReady();
         }
-        window.hideRules = () => {
-            document.getElementById('rules-modal').classList.add('hidden');
-        }
+
+        window.showRules = () => { document.getElementById('rules-modal').classList.remove('hidden'); }
+        window.hideRules = () => { document.getElementById('rules-modal').classList.add('hidden'); }
 
         // === JOIN OTIMIZADO ===
         window.joinGame = async () => {
@@ -426,27 +444,23 @@
 
                 docRef = doc(db, 'artifacts', 'jogo-arquivo-morto', 'public', 'data', 'rooms', currentRoomId);
 
-                // Listener em Tempo Real
                 if (unsubscribeRoom) unsubscribeRoom();
                 unsubscribeRoom = onSnapshot(docRef, (snap) => {
                     if (!snap.exists()) {
-                        // Sala não existe: Criar!
                         createRoom();
                     } else {
-                        // Sala existe: Entrar se não estiver nela
                         const data = snap.data();
                         localState = data;
                         
                         const playerExists = data.players.some(p => p.id === myId);
                         if (!playerExists) {
-                            addSelfToRoom(data.players);
+                            addSelfToRoom();
                         } else {
                             renderGame(localState);
                         }
                     }
                 }, (error) => {
                     console.error("Erro no listener:", error);
-                    // Mensagem de erro amigável para problema de permissão/configuração
                     if (error.code === 'permission-denied' || error.code === 'unavailable') {
                         statusDiv.innerHTML = `<span class='font-bold text-red-600'>ERRO DE CONEXÃO:</span><br>O jogo não conseguiu acessar o banco de dados.<br>1. Verifique se você configurou o "firebaseConfig" corretamente.<br>2. Verifique se o banco Firestore está criado no "Modo de Teste".`;
                     } else {
@@ -456,8 +470,7 @@
 
             } catch (e) {
                 console.error("Erro fatal:", e);
-                // TRATAMENTO DE ERRO DE CONFIGURAÇÃO DE AUTH
-                if (e.code === 'auth/configuration-not-found' || e.code === 'auth/operation-not-allowed' || e.code === 'auth/admin-restricted-operation') {
+                if (e.code === 'auth/configuration-not-found' || e.code === 'auth/operation-not-allowed') {
                     statusDiv.innerHTML = `<span class='font-bold text-red-600'>ERRO DE AUTENTICAÇÃO:</span><br>Falta ativar o Login Anônimo no console.<br>1. Vá em "Authentication" > "Sign-in method".<br>2. Ative o provedor "Anônimo".`;
                 } else {
                     statusDiv.innerText = "Erro Crítico: " + e.message;
@@ -465,26 +478,52 @@
             }
         };
 
+        // Cria o baralho global embaralhado
+        function createDeck() {
+            let deck = [];
+            for (let i = 1; i <= TOTAL_CARDS; i++) deck.push(i);
+            return deck.sort(() => Math.random() - 0.5);
+        }
+
         async function createRoom() {
-            const newPlayer = { id: myId, name: myName, score: 0, hand: drawCards(6) };
+            // Gera baralho inicial
+            const fullDeck = createDeck();
+            // Retira 6 cartas para o primeiro jogador
+            const initialHand = fullDeck.splice(0, 6);
+            
+            const newPlayer = { id: myId, name: myName, score: 0, hand: initialHand };
+            
             try {
                 await setDoc(docRef, {
                     phase: 'lobby',
                     players: [newPlayer],
+                    deck: fullDeck, // Salva o resto do baralho
                     roundCount: 0,
                     witnessIndex: 0,
                     createdAt: new Date().toISOString()
                 });
             } catch(e) {
-                console.error("Erro ao criar sala. Verifique permissões do Firestore:", e);
+                console.error("Erro ao criar sala:", e);
             }
         }
 
-        async function addSelfToRoom(currentPlayers) {
-            const newPlayer = { id: myId, name: myName, score: 0, hand: drawCards(6) };
-            const updatedPlayers = [...currentPlayers, newPlayer];
+        async function addSelfToRoom() {
+            // Usa getDoc para garantir que pegamos o deck atualizado antes de escrever
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+            
+            const data = snap.data();
+            let currentDeck = data.deck || [];
+            
+            // Se o deck acabou (improvável no início), reseta
+            if (currentDeck.length < 6) currentDeck = createDeck();
+            
+            const myHand = currentDeck.splice(0, 6);
+            const newPlayer = { id: myId, name: myName, score: 0, hand: myHand };
+            const updatedPlayers = [...data.players, newPlayer];
+
             try {
-                await updateDoc(docRef, { players: updatedPlayers });
+                await updateDoc(docRef, { players: updatedPlayers, deck: currentDeck });
             } catch(e) {
                 console.error("Erro ao entrar na sala:", e);
             }
@@ -546,16 +585,13 @@
                 showEvidence(state.currentWords);
                 
                 if (isWitness) {
-                    // ALTERAÇÃO 3: Removida a tela de bloqueio (showMsg).
-                    // Agora mostramos a mesa para a testemunha ver as cartas chegando.
                     document.getElementById('voting-table').classList.remove('hidden');
                     const tableTitle = document.querySelector('#voting-table h3');
                     tableTitle.innerText = "AGUARDANDO DETETIVES JOGAREM SUAS CARTAS...";
                     tableTitle.className = "text-white text-center mb-4 text-sm title-font bg-yellow-600/80 p-2 rounded animate-pulse";
-                    
-                    // Renderiza as cartas que já foram jogadas até agora
                     renderVotingTable(state.tableCards, false, null);
                 } else {
+                    // TRAVA DE SELEÇÃO: Se já jogou, mostra apenas mensagem
                     if (state.playedThisRound.includes(myId)) {
                         showMsg("Evidência Enviada", "Aguardando os outros detetives.");
                     } else {
@@ -569,7 +605,6 @@
                 showEvidence(state.currentWords);
                 document.getElementById('voting-table').classList.remove('hidden');
                 
-                // Restaura o título padrão da mesa
                 const tableTitle = document.querySelector('#voting-table h3');
                 tableTitle.innerText = "QUEM É A TESTEMUNHA? (VOTE)";
                 tableTitle.className = "text-white text-center mb-4 text-xl title-font bg-red-900/80 p-2 rounded";
@@ -579,10 +614,8 @@
                     showMsg("Observando", "Você não vota neste turno.");
                     document.getElementById('msg-container').style.backgroundColor = "rgba(0,0,0,0.1)";
                     document.getElementById('msg-container').style.pointerEvents = "none";
-                    // Move a mensagem para baixo para não tampar a mesa
                     document.querySelector('#msg-container > div').classList.add('mt-[400px]');
                 } else {
-                    // Garante que a mensagem esteja centralizada para quem vota
                     document.querySelector('#msg-container > div').classList.remove('mt-[400px]');
                     
                     if (state.votes && state.votes[myId]) {
@@ -673,15 +706,17 @@
                 const url = `https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/${cardObj.cardId}.png?raw=true`;
                 const div = document.createElement('div');
                 const isMine = (cardObj.cardId === myOwnCardId);
-                div.className = `relative card-frame w-24 md:w-32 rounded overflow-hidden shadow-lg border-2 ${isMine ? 'border-yellow-500 opacity-80' : 'border-gray-200'}`;
+                const isActionable = canVote && !isMine;
+                
+                div.className = `relative card-frame w-24 md:w-32 rounded overflow-hidden shadow-lg border-2 ${isMine ? 'border-yellow-500 opacity-80' : 'border-gray-200'} ${!isActionable && canVote ? 'card-disabled' : ''}`;
+                
                 div.innerHTML = `
                     <img src="${url}" class="w-full h-full object-cover">
                     ${isMine ? '<div class="absolute bottom-0 w-full bg-yellow-500 text-black text-xs font-bold text-center">SUA CARTA</div>' : ''}
                 `;
-                if (canVote && !isMine) {
+                
+                if (isActionable) {
                     div.onclick = () => submitVote(cardObj.owner); 
-                } else if (isMine) {
-                    div.style.cursor = 'not-allowed';
                 }
                 grid.appendChild(div);
             });
@@ -696,15 +731,35 @@
                     <span class="font-bold text-red-900">${p.score} pts</span>
                  </li>`
             ).join('');
+            
             const witness = state.players[state.witnessIndex];
             document.getElementById('round-results').innerHTML = `
                 <p><strong>A Testemunha:</strong> ${witness ? witness.name : 'N/A'}</p>
                 <p><strong>Palavras:</strong> ${state.currentWords.join(" + ")}</p>
             `;
+
+            // Renderiza as cartas reveladas com nomes
+            const revealedGrid = document.getElementById('revealed-cards-grid');
+            revealedGrid.innerHTML = '';
+            state.tableCards.forEach(cardObj => {
+                const p = state.players.find(pl => pl.id === cardObj.owner);
+                const isWitnessCard = (cardObj.owner === witness.id);
+                const url = `https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/${cardObj.cardId}.png?raw=true`;
+                
+                const div = document.createElement('div');
+                div.className = `w-20 md:w-24 border-2 ${isWitnessCard ? 'border-red-600' : 'border-gray-400'} rounded overflow-hidden bg-gray-200 flex flex-col`;
+                div.innerHTML = `
+                    <img src="${url}" class="w-full h-24 object-cover">
+                    <div class="text-[10px] p-1 text-center font-bold ${isWitnessCard ? 'bg-red-600 text-white' : 'text-black'}">
+                        ${p ? p.name : '???'}
+                        ${isWitnessCard ? '<br>(TESTEMUNHA)' : ''}
+                    </div>
+                `;
+                revealedGrid.appendChild(div);
+            });
         }
 
         window.requestStartGame = async () => {
-            // ALTERAÇÃO: MUDADO DE 3 PARA 1 PARA TESTES
             if (!localState || localState.players.length < 1) {
                 alert("É necessário no mínimo 1 agente.");
                 return;
@@ -722,6 +777,10 @@
 
         window.confirmWitnessPlay = async () => {
             if (!selectedCard || selectedWords.length !== 2) return;
+            
+            // Trava: Se já jogou, não faz nada (segurança extra)
+            if (localState.playedThisRound && localState.playedThisRound.includes(myId)) return;
+
             const me = localState.players.find(p => p.id === myId);
             const newHand = me.hand.filter(c => c !== selectedCard);
             const updatedPlayers = localState.players.map(p => p.id === myId ? { ...p, hand: newHand } : p);
@@ -737,7 +796,11 @@
         };
 
         window.submitDetectiveCard = async (cardId) => {
+            // TRAVA: Se já jogou, retorna imediatamente
+            if (localState.playedThisRound && localState.playedThisRound.includes(myId)) return;
+
             if(!confirm("Confirmar essa carta?")) return;
+            
             const me = localState.players.find(p => p.id === myId);
             const newHand = me.hand.filter(c => c !== cardId);
             const updatedPlayers = localState.players.map(p => p.id === myId ? { ...p, hand: newHand } : p);
@@ -769,7 +832,14 @@
         };
 
         async function calculateScores(finalVotes) {
-            const players = [...localState.players];
+            // Usa getDoc para garantir estado atualizado do baralho
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+            const data = snap.data();
+
+            const players = [...data.players];
+            let currentDeck = data.deck || [];
+
             const witness = players[localState.witnessIndex];
             const detectives = players.filter(p => p.id !== witness.id);
             let witnessVotes = 0;
@@ -779,9 +849,7 @@
             });
 
             if (witnessVotes === detectives.length || witnessVotes === 0) {
-                // ALTERAÇÃO 2: Detetives ganham 3 pontos (era 2) ao achar a Testemunha
                 detectives.forEach(d => { players.find(p => p.id === d.id).score += 3; });
-                
                 if (witnessVotes === 0) {
                      Object.values(finalVotes).forEach(targetId => {
                         const target = players.find(p => p.id === targetId);
@@ -801,13 +869,22 @@
                 });
             }
 
-            players.forEach(p => { p.hand.push(drawCards(1)[0]); });
+            // Redistribuição de cartas do Baralho Global
+            players.forEach(p => { 
+                if (currentDeck.length > 0) {
+                    p.hand.push(currentDeck.shift());
+                } else {
+                    // Se acabar, reinicia baralho (opcional, aqui apenas evita crash)
+                    currentDeck = createDeck();
+                    p.hand.push(currentDeck.shift());
+                }
+            });
 
             const sorted = [...players].sort((a,b) => b.score - a.score);
             if (sorted[0].score >= WINNING_SCORE) {
                 await updateDoc(docRef, { players: players, votes: finalVotes, phase: 'game_over', winner: sorted[0] });
             } else {
-                await updateDoc(docRef, { players: players, votes: finalVotes, phase: 'scoring' });
+                await updateDoc(docRef, { players: players, deck: currentDeck, votes: finalVotes, phase: 'scoring' });
             }
         }
 
@@ -829,12 +906,6 @@
             if(!confirm("Reiniciar jogo?")) return;
             await setDoc(docRef, { phase: 'lobby', players: [], roundCount: 0 });
             window.location.reload();
-        }
-
-        function drawCards(amount) {
-            let cards = [];
-            for(let i=0; i<amount; i++) cards.push(Math.floor(Math.random() * TOTAL_CARDS) + 1);
-            return cards;
         }
 
         window.toggleAudio = function() {
