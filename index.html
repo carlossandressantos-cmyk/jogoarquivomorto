@@ -308,7 +308,7 @@
         let joinAttempts = 0;
 
         const TOTAL_CARDS = 60;
-        const WINNING_SCORE = 40;
+        const WINNING_SCORE = 25; // ALTERAÇÃO 1: Meta reduzida para 25 pontos
         const WORDS_LIST = [
             "Chuva", "Nevoeiro", "Sombra", "Luz", "Ruído", "Silêncio", "Frio", "Calor", "Poeira", "Cinza", "Ecos", "Escuridão", "Reflexo", "Vazio", "Cheiro",
             "Sangue", "Vidro", "Metal", "Ferrugem", "Papel", "Chave", "Fio", "Relógio", "Espelho", "Máquina", "Faca", "Veneno", "Dinheiro", "Carta", "Telefone",
@@ -463,8 +463,17 @@
             } else if (state.phase === 'detective_play') {
                 phaseDisplay.innerText = "INVESTIGAÇÃO";
                 showEvidence(state.currentWords);
+                
                 if (isWitness) {
-                    showMsg("Aguardando", "Os detetives estão escolhendo cartas falsas...");
+                    // ALTERAÇÃO 3: Removida a tela de bloqueio (showMsg).
+                    // Agora mostramos a mesa para a testemunha ver as cartas chegando.
+                    document.getElementById('voting-table').classList.remove('hidden');
+                    const tableTitle = document.querySelector('#voting-table h3');
+                    tableTitle.innerText = "AGUARDANDO DETETIVES JOGAREM SUAS CARTAS...";
+                    tableTitle.className = "text-white text-center mb-4 text-sm title-font bg-yellow-600/80 p-2 rounded animate-pulse";
+                    
+                    // Renderiza as cartas que já foram jogadas até agora
+                    renderVotingTable(state.tableCards, false, null);
                 } else {
                     if (state.playedThisRound.includes(myId)) {
                         showMsg("Evidência Enviada", "Aguardando os outros detetives.");
@@ -478,12 +487,23 @@
                 phaseDisplay.innerText = "VOTAÇÃO";
                 showEvidence(state.currentWords);
                 document.getElementById('voting-table').classList.remove('hidden');
+                
+                // Restaura o título padrão da mesa
+                const tableTitle = document.querySelector('#voting-table h3');
+                tableTitle.innerText = "QUEM É A TESTEMUNHA? (VOTE)";
+                tableTitle.className = "text-white text-center mb-4 text-xl title-font bg-red-900/80 p-2 rounded";
+
                 if (isWitness) {
                     renderVotingTable(state.tableCards, false, null);
                     showMsg("Observando", "Você não vota neste turno.");
                     document.getElementById('msg-container').style.backgroundColor = "rgba(0,0,0,0.1)";
                     document.getElementById('msg-container').style.pointerEvents = "none";
+                    // Move a mensagem para baixo para não tampar a mesa
+                    document.querySelector('#msg-container > div').classList.add('mt-[400px]');
                 } else {
+                    // Garante que a mensagem esteja centralizada para quem vota
+                    document.querySelector('#msg-container > div').classList.remove('mt-[400px]');
+                    
                     if (state.votes && state.votes[myId]) {
                         showMsg("Voto Registrado", "Aguardando apuração...");
                         renderVotingTable(state.tableCards, false, null);
@@ -678,7 +698,9 @@
             });
 
             if (witnessVotes === detectives.length || witnessVotes === 0) {
-                detectives.forEach(d => { players.find(p => p.id === d.id).score += 2; });
+                // ALTERAÇÃO 2: Detetives ganham 3 pontos (era 2) ao achar a Testemunha
+                detectives.forEach(d => { players.find(p => p.id === d.id).score += 3; });
+                
                 if (witnessVotes === 0) {
                      Object.values(finalVotes).forEach(targetId => {
                         const target = players.find(p => p.id === targetId);
