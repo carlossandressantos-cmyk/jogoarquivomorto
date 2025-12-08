@@ -135,7 +135,7 @@
                     
                     <div>
                         <h3 class="font-bold text-lg bg-gray-300 inline-block px-2 mb-2">1. O OBJETIVO</h3>
-                        <p>Desvendar a imagem correta baseada nas pistas vagas deixadas pela Testemunha. O primeiro investigador a atingir <strong class="marker-highlight">25 Pontos</strong> encerra o caso e vence.</p>
+                        <p>Desvendar a imagem correta baseada nas pistas vagas deixadas pela Testemunha. O primeiro investigador a atingir <strong class="marker-highlight">35 Pontos</strong> encerra o caso e vence.</p>
                     </div>
 
                     <div class="grid md:grid-cols-2 gap-4">
@@ -255,7 +255,7 @@
                 <div class="bg-yellow-100 p-4 border border-yellow-300 mb-6 text-sm">
                     <strong>INSTRUÇÕES:</strong><br>
                     Mínimo: 1 Agente.<br>
-                    Objetivo: 25 Pontos.<br>
+                    Objetivo: 35 Pontos.<br>
                 </div>
                 
                 <button onclick="showRules()" class="w-full mb-3 bg-gray-700 text-white py-3 font-bold hover:bg-gray-600 border-2 border-gray-900">
@@ -296,7 +296,7 @@
                         <span class="text-[10px] text-gray-500 block">SEUS PONTOS</span>
                         <div class="leading-none">
                             <span id="my-score" class="text-xl md:text-2xl font-bold title-font">0</span>
-                            <span class="text-[10px] text-gray-600">/ 25</span>
+                            <span class="text-[10px] text-gray-600">/ 35</span>
                         </div>
                     </div>
                     <img id="my-avatar-header" src="" class="w-10 h-10 rounded-full border border-black avatar-small">
@@ -499,8 +499,8 @@
         let joinAttempts = 0;
         let isIntroPlaying = false; // Controle de Intro
 
-        const TOTAL_CARDS = 60;
-        const WINNING_SCORE = 25;
+        const TOTAL_CARDS = 127; // Limite superior
+        const WINNING_SCORE = 35; // Pontuação para vitória
         const WORDS_LIST = [
             "Chuva", "Nevoeiro", "Sombra", "Luz", "Ruído", "Silêncio", "Frio", "Calor", "Poeira", "Cinza", "Ecos", "Escuridão", "Reflexo", "Vazio", "Cheiro",
             "Sangue", "Vidro", "Metal", "Ferrugem", "Papel", "Chave", "Fio", "Relógio", "Espelho", "Máquina", "Faca", "Veneno", "Dinheiro", "Carta", "Telefone",
@@ -685,7 +685,11 @@
 
         function createDeck() {
             let deck = [];
-            for (let i = 1; i <= TOTAL_CARDS; i++) deck.push(i);
+            // Cartas originais (1-60)
+            for (let i = 1; i <= 60; i++) deck.push(i);
+            // Novas cartas (63-127) - O usuário mencionou especificamente 63 a 127
+            for (let i = 63; i <= 127; i++) deck.push(i);
+            
             return deck.sort(() => Math.random() - 0.5);
         }
 
@@ -694,9 +698,13 @@
             currentPlayers.forEach(p => p.hand.forEach(c => usedCards.add(c)));
             
             let newDeck = [];
-            for(let i=1; i<=TOTAL_CARDS; i++) {
-                if(!usedCards.has(i)) newDeck.push(i);
-            }
+            // Usa a mesma lógica de createDeck para regenerar o baralho
+            const fullDeck = createDeck();
+            
+            fullDeck.forEach(card => {
+                if(!usedCards.has(card)) newDeck.push(card);
+            });
+            
             return newDeck.sort(() => Math.random() - 0.5);
         }
 
@@ -900,7 +908,14 @@
                 const url = `https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/${num}.png?raw=true`;
                 const div = document.createElement('div');
                 div.className = `card-frame rounded overflow-hidden aspect-[2/3] bg-gray-800 border-2 ${selectedCard === num ? 'card-selected' : 'border-gray-600'}`;
-                div.innerHTML = `<img src="${url}" class="w-full h-full object-cover">`;
+                
+                // ADICIONADO TRATAMENTO DE ERRO DE IMAGEM
+                div.innerHTML = `
+                    <img src="${url}" 
+                         class="w-full h-full object-cover" 
+                         onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'flex items-center justify-center w-full h-full bg-gray-600 text-white text-[10px] text-center p-1\\'>SEM IMAGEM<br>(${num})</div>';">
+                `;
+                
                 if (clickable) {
                     div.onclick = () => {
                         selectedCard = num;
@@ -952,8 +967,11 @@
                 
                 div.className = `relative card-frame w-24 md:w-32 rounded overflow-hidden shadow-lg border-2 ${isMine ? 'border-yellow-500 opacity-80' : 'border-gray-200'} ${!isActionable && canVote ? 'card-disabled' : ''}`;
                 
+                // ADICIONADO TRATAMENTO DE ERRO DE IMAGEM
                 div.innerHTML = `
-                    <img src="${url}" class="w-full h-full object-cover">
+                    <img src="${url}" 
+                         class="w-full h-full object-cover"
+                         onerror="this.onerror=null;this.parentElement.querySelector('img').style.display='none';this.parentElement.innerHTML+='<div class=\\'absolute inset-0 flex items-center justify-center bg-gray-600 text-white text-xs text-center\\'>SEM IMAGEM<br>(${cardObj.cardId})</div>';">
                     ${isMine ? '<div class="absolute bottom-0 w-full bg-yellow-500 text-black text-xs font-bold text-center">SUA CARTA</div>' : ''}
                 `;
                 
@@ -1024,9 +1042,12 @@
                     votersHtml += `</div>`;
                 }
 
+                // ADICIONADO TRATAMENTO DE ERRO DE IMAGEM NA REVELAÇÃO
                 div.innerHTML = `
-                    <div class="relative">
-                        <img src="${url}" class="w-full h-32 object-cover opacity-90">
+                    <div class="relative w-full h-32">
+                        <img src="${url}" 
+                             class="w-full h-full object-cover opacity-90"
+                             onerror="this.onerror=null;this.parentElement.innerHTML='<div class=\\'w-full h-full flex items-center justify-center bg-gray-600 text-white text-[10px] text-center\\'>SEM IMAGEM<br>(${cardObj.cardId})</div>';">
                         ${votersHtml}
                     </div>
                     <div class="text-[10px] p-1 text-center font-bold leading-tight flex flex-col items-center justify-center ${isWitnessCard ? 'bg-red-600 text-white' : 'bg-gray-300 text-black'}">
@@ -1186,7 +1207,8 @@
 
         window.resetGameData = async () => {
             if(!confirm("Reiniciar jogo?")) return;
-            await setDoc(docRef, { phase: 'lobby', players: [], roundCount: 0 });
+            // ATUALIZAÇÃO IMPORTANTE: Limpa também o DECK para forçar a recriação com as novas cartas
+            await setDoc(docRef, { phase: 'lobby', players: [], roundCount: 0, deck: null }); 
             window.location.reload();
         }
 
