@@ -39,6 +39,31 @@
             pointer-events: none;
             cursor: not-allowed;
         }
+
+        /* Personagens (Estilo Sherlock/Foto Antiga) */
+        .char-option {
+            filter: grayscale(100%) sepia(40%) contrast(110%);
+            transition: all 0.3s;
+            border: 3px solid #555;
+            background-color: #d1d1d1;
+        }
+        .char-option:hover {
+            filter: grayscale(0%) sepia(60%) contrast(120%);
+            transform: scale(1.05);
+            border-color: #888;
+        }
+        .char-selected {
+            filter: grayscale(0%) sepia(20%) contrast(110%);
+            border-color: #b91c1c;
+            background-color: #e3c4b6;
+            transform: scale(1.1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+        .avatar-small {
+            filter: grayscale(100%) sepia(30%);
+            border: 1px solid #333;
+            background: #d1d1d1;
+        }
         
         /* Botões e Inputs */
         input:focus { outline: none; border-color: #b91c1c; }
@@ -47,6 +72,10 @@
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .fade-in { animation: fadeIn 0.5s ease-out; }
         
+        .fade-text {
+            transition: opacity 1.5s ease-in-out;
+        }
+
         /* Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #333; }
@@ -83,7 +112,19 @@
     <!-- ÁREA PRINCIPAL DO JOGO -->
     <main id="game-app" class="w-full max-w-5xl min-h-[600px] relative">
         
-        <!-- MODAL: MANUAL DE REGRAS (NOVO) -->
+        <!-- TELA DE INTRODUÇÃO (NOVO) -->
+        <div id="screen-intro" class="hidden fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center text-center p-8">
+            <div id="intro-text-container" class="max-w-2xl">
+                <p id="intro-line" class="text-white font-mono text-xl md:text-3xl tracking-widest leading-relaxed fade-text opacity-0">
+                    ...
+                </p>
+            </div>
+            <button onclick="skipIntro()" class="absolute bottom-8 right-8 text-gray-600 text-xs hover:text-white uppercase tracking-widest border border-gray-800 p-2 hover:border-gray-500 transition-colors">
+                Pular Intro >>
+            </button>
+        </div>
+
+        <!-- MODAL: MANUAL DE REGRAS -->
         <div id="rules-modal" class="hidden fixed inset-0 bg-black/95 z-[60] overflow-y-auto p-4 flex items-center justify-center fade-in">
             <div class="bg-white max-w-3xl w-full p-8 rounded paper-texture relative border-4 border-gray-800 shadow-2xl">
                 <button onclick="hideRules()" class="absolute top-4 right-4 text-2xl font-bold hover:text-red-600">X</button>
@@ -149,16 +190,24 @@
                 <span class="block mt-1">Solução: Use a extensão <strong>"Live Server"</strong> no VS Code ou hospede no Vercel/GitHub Pages.</span>
             </div>
 
-            <!-- Aviso de Configuração Faltante (JavaScript vai ativar se necessário) -->
+            <!-- Aviso de Configuração Faltante -->
             <div id="config-warning" class="hidden mb-4 p-3 bg-yellow-100 border-l-4 border-yellow-600 text-yellow-900 text-xs text-left font-mono">
                 <strong>ATENÇÃO:</strong> As chaves do Firebase parecem ser as de exemplo.<br>
                 Para jogar online com amigos, você precisa criar seu próprio projeto no <a href="https://console.firebase.google.com" target="_blank" class="underline font-bold">Firebase Console</a> e colar as chaves no código.
             </div>
 
+            <!-- SELEÇÃO DE PERSONAGEM -->
+            <div class="mb-4 text-left">
+                <label class="block text-sm font-bold mb-2">SELECIONE SEU AGENTE:</label>
+                <div id="char-selection-grid" class="grid grid-cols-4 gap-2 mb-4">
+                    <!-- Gerado via JS -->
+                </div>
+            </div>
+
             <!-- Nome -->
             <div class="mb-4">
-                <label class="block text-sm font-bold mb-2 text-left">NOME DO AGENTE:</label>
-                <input type="text" id="player-name-input" class="w-full bg-gray-200 border-2 border-gray-400 p-3 font-mono text-lg uppercase" placeholder="SEU NOME">
+                <label class="block text-sm font-bold mb-2 text-left">NOME DE CÓDIGO:</label>
+                <input type="text" id="player-name-input" class="w-full bg-gray-200 border-2 border-gray-400 p-3 font-mono text-lg uppercase" placeholder="SEU APELIDO">
             </div>
 
             <!-- Sala -->
@@ -205,7 +254,7 @@
             <div class="w-full md:w-1/3 flex flex-col justify-center border-l-2 border-gray-400 pl-6 border-dashed">
                 <div class="bg-yellow-100 p-4 border border-yellow-300 mb-6 text-sm">
                     <strong>INSTRUÇÕES:</strong><br>
-                    Jogadores: 3 a 8.<br>
+                    Mínimo: 1 Agente.<br>
                     Objetivo: 25 Pontos.<br>
                 </div>
                 
@@ -222,29 +271,35 @@
         <!-- TELA 3: JOGO (TABULEIRO) -->
         <div id="screen-game" class="hidden w-full flex flex-col gap-4 fade-in">
             
-            <!-- BARRA DE STATUS SUPERIOR (ATUALIZADA COM TOP 3) -->
+            <!-- BARRA DE STATUS SUPERIOR -->
             <div class="paper-texture p-2 md:p-3 flex flex-wrap justify-between items-center rounded border-b-4 border-red-900 gap-y-2">
                 
                 <!-- Testemunha -->
-                <div class="w-1/2 md:w-1/4">
-                    <span class="text-[10px] text-gray-500 block">TESTEMUNHA</span>
-                    <span id="current-witness-name" class="text-base md:text-xl font-bold title-font text-red-900 leading-none">...</span>
+                <div class="w-1/2 md:w-1/4 flex items-center gap-2">
+                    <img id="witness-avatar-header" src="" class="w-10 h-10 rounded-full border border-black avatar-small hidden md:block">
+                    <div>
+                        <span class="text-[10px] text-gray-500 block">TESTEMUNHA</span>
+                        <span id="current-witness-name" class="text-base md:text-xl font-bold title-font text-red-900 leading-none">...</span>
+                    </div>
                 </div>
 
-                <!-- TOP 3 (NOVO) -->
+                <!-- TOP 3 -->
                 <div class="order-last md:order-none w-full md:w-2/4 flex justify-center">
-                    <div id="top-rank-display" class="flex gap-2 text-[10px] md:text-xs font-mono bg-gray-300/50 p-1 rounded border border-gray-400">
+                    <div id="top-rank-display" class="flex gap-2 text-[10px] md:text-xs font-mono bg-gray-300/50 p-1 rounded border border-gray-400 items-center">
                         <!-- Injetado via JS -->
                     </div>
                 </div>
 
                 <!-- Pontos Pessoais -->
-                <div class="w-1/2 md:w-1/4 text-right">
-                    <span class="text-[10px] text-gray-500 block">SEUS PONTOS</span>
-                    <div class="leading-none">
-                        <span id="my-score" class="text-xl md:text-2xl font-bold title-font">0</span>
-                        <span class="text-[10px] text-gray-600">/ 25</span>
+                <div class="w-1/2 md:w-1/4 text-right flex items-center justify-end gap-2">
+                    <div>
+                        <span class="text-[10px] text-gray-500 block">SEUS PONTOS</span>
+                        <div class="leading-none">
+                            <span id="my-score" class="text-xl md:text-2xl font-bold title-font">0</span>
+                            <span class="text-[10px] text-gray-600">/ 25</span>
+                        </div>
                     </div>
+                    <img id="my-avatar-header" src="" class="w-10 h-10 rounded-full border border-black avatar-small">
                 </div>
                 
                 <!-- Fase -->
@@ -287,7 +342,7 @@
                 <div id="word-selection-area" class="hidden paper-texture p-4 mt-2">
                     <h3 class="text-center font-bold mb-2">SELECIONE 2 PALAVRAS</h3>
                     
-                    <!-- INPUT PARA PALAVRA PERSONALIZADA (NOVO) -->
+                    <!-- INPUT PARA PALAVRA PERSONALIZADA -->
                     <div class="flex gap-2 mb-2 border-b border-gray-400 pb-2">
                         <input type="text" id="custom-word-input" class="w-full p-2 font-mono uppercase bg-white border border-gray-500" placeholder="DIGITE UMA PALAVRA..." maxlength="15">
                         <button onclick="addCustomWord()" class="bg-gray-800 text-white px-4 font-bold hover:bg-black border border-black">+</button>
@@ -324,7 +379,7 @@
                         <!-- Resultados detalhados -->
                     </div>
 
-                    <!-- Visualização das Cartas Reveladas (NOVO) -->
+                    <!-- Visualização das Cartas Reveladas -->
                     <div class="mb-6">
                         <h4 class="font-bold mb-2 text-sm text-center bg-black text-white p-1">CARTAS REVELADAS</h4>
                         <div id="revealed-cards-grid" class="flex flex-wrap justify-center gap-2">
@@ -349,6 +404,9 @@
                     
                     <div class="bg-black text-white p-6 mb-8 rounded shadow-lg">
                         <p class="text-sm uppercase tracking-widest text-gray-400 mb-2">Melhor Investigador</p>
+                        <div class="flex justify-center mb-4">
+                            <img id="winner-avatar" src="" class="w-24 h-24 rounded-full border-4 border-yellow-500 bg-white shadow-lg">
+                        </div>
                         <div id="winner-name" class="text-4xl font-bold text-yellow-500 mb-2">AGENTE X</div>
                         <div id="winner-score" class="text-xl">0 Pontos</div>
                     </div>
@@ -401,16 +459,45 @@
             db = getFirestore(app);
         }
 
+        // DEFINIÇÃO DOS PERSONAGENS (Imagens Reais do Repositório)
+        const REPO_URL = "https://github.com/carlossandressantos-cmyk/jogoarquivomorto/blob/main/";
+        const RAW_PARAM = "?raw=true";
+
+        const CHARACTERS = [
+            { 
+                id: 'agent_white_male', 
+                name: 'O Detetive', 
+                img: REPO_URL + 'homembranco.png' + RAW_PARAM 
+            }, 
+            { 
+                id: 'agent_black_male', 
+                name: 'O Inspetor', 
+                img: REPO_URL + 'homemnegro.png' + RAW_PARAM 
+            }, 
+            { 
+                id: 'agent_white_female', 
+                name: 'A Analista', 
+                img: REPO_URL + 'mulherbranca.png' + RAW_PARAM 
+            }, 
+            { 
+                id: 'agent_black_female', 
+                name: 'A Espiã', 
+                img: REPO_URL + 'mulhernegra.png' + RAW_PARAM 
+            } 
+        ];
+
         // Variáveis
         let currentRoomId = null;
         let docRef = null;
         let myId = null;
         let myName = "";
+        let myCharacterId = CHARACTERS[0].id; // Default
         let localState = null;
         let selectedWords = [];
         let selectedCard = null;
         let unsubscribeRoom = null;
         let joinAttempts = 0;
+        let isIntroPlaying = false; // Controle de Intro
 
         const TOTAL_CARDS = 60;
         const WINNING_SCORE = 25;
@@ -423,6 +510,30 @@
             "Início", "Fim", "Sempre", "Nunca", "Talvez", "Antes", "Depois", "Dentro", "Fora", "Alto", "Baixo", "Rápido", "Lento", "Tudo", "Nada"
         ];
 
+        // GERAÇÃO DA GRADE DE PERSONAGENS NA TELA DE LOGIN
+        function renderCharacterSelection() {
+            const grid = document.getElementById('char-selection-grid');
+            grid.innerHTML = '';
+            CHARACTERS.forEach(char => {
+                const div = document.createElement('div');
+                div.className = `char-option cursor-pointer rounded-full overflow-hidden w-16 h-16 md:w-20 md:h-20 flex items-center justify-center ${char.id === myCharacterId ? 'char-selected' : ''}`;
+                div.innerHTML = `<img src="${char.img}" alt="${char.name}" class="w-full h-full object-cover">`;
+                div.onclick = () => {
+                    myCharacterId = char.id;
+                    // Atualiza visual
+                    Array.from(grid.children).forEach(child => child.classList.remove('char-selected'));
+                    div.classList.add('char-selected');
+                };
+                grid.appendChild(div);
+            });
+        }
+        
+        // Helper para pegar imagem do personagem pelo ID
+        function getCharImg(id) {
+            const char = CHARACTERS.find(c => c.id === id);
+            return char ? char.img : CHARACTERS[0].img;
+        }
+
         window.generateRoomCode = () => {
             const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
             let code = "";
@@ -430,7 +541,6 @@
             document.getElementById('room-code-input').value = code;
         }
 
-        // FUNÇÃO NOVA: ADICIONAR PALAVRA PERSONALIZADA
         window.addCustomWord = () => {
             const input = document.getElementById('custom-word-input');
             const word = input.value.trim().toUpperCase();
@@ -439,16 +549,13 @@
             if (selectedWords.includes(word)) { alert("Palavra já selecionada!"); return; }
             if (selectedWords.length >= 2) { alert("Você já escolheu 2 palavras. Remova uma antes."); return; }
 
-            // Adiciona a palavra à lista lógica
             selectedWords.push(word);
             
-            // Cria o botão visualmente e já coloca como selecionado
             const grid = document.getElementById('word-grid');
             const btn = document.createElement('button');
-            btn.className = "text-xs p-1 bg-red-800 text-white border border-gray-400 font-bold border-2 border-yellow-500"; // Destaque extra
+            btn.className = "text-xs p-1 bg-red-800 text-white border border-gray-400 font-bold border-2 border-yellow-500"; 
             btn.innerText = word;
             
-            // Lógica de clique igual aos outros botões
             btn.onclick = () => {
                 if (selectedWords.includes(word)) {
                     selectedWords = selectedWords.filter(w => w !== word);
@@ -462,19 +569,14 @@
                 checkWitnessReady();
             };
 
-            // Adiciona no topo da lista para fácil visualização
             grid.prepend(btn);
-            
-            // Limpa o input
             input.value = "";
             checkWitnessReady();
         }
 
-        // FUNÇÃO NOVA: LIMPAR PALAVRAS SELECIONADAS
         window.clearWordSelection = () => {
             selectedWords = [];
             const grid = document.getElementById('word-grid');
-            // Reseta o visual de todos os botões
             Array.from(grid.children).forEach(btn => {
                 btn.classList.remove('bg-red-800', 'text-white', 'border-yellow-500');
                 btn.classList.add('bg-gray-200', 'text-black');
@@ -484,6 +586,44 @@
 
         window.showRules = () => { document.getElementById('rules-modal').classList.remove('hidden'); }
         window.hideRules = () => { document.getElementById('rules-modal').classList.add('hidden'); }
+
+        // === LÓGICA DA INTRODUÇÃO ===
+        async function playIntro() {
+            const screen = document.getElementById('screen-intro');
+            const textLine = document.getElementById('intro-line');
+            screen.classList.remove('hidden');
+
+            const lines = [
+                "Prepare-se.",
+                "Aqui, a verdade é apenas um ponto de vista e o silêncio fala mais alto que as palavras.",
+                "Entre o delírio e a evidência, você é capaz de encontrar a resposta?",
+                "O interrogatório vai começar."
+            ];
+
+            for (const line of lines) {
+                if (!isIntroPlaying) break; // Check skip
+                
+                textLine.style.opacity = 0;
+                await new Promise(r => setTimeout(r, 500));
+                
+                textLine.innerText = line;
+                textLine.style.opacity = 1;
+                
+                // Leitura: 2s base + um pouco por tamanho
+                const readTime = 2000 + (line.length * 50);
+                await new Promise(r => setTimeout(r, readTime));
+            }
+            
+            // Fim da intro
+            skipIntro();
+        }
+
+        window.skipIntro = () => {
+            isIntroPlaying = false;
+            document.getElementById('screen-intro').classList.add('hidden');
+            // Se o jogo já carregou no background, renderiza agora
+            if (localState) renderGame(localState);
+        }
 
         // === JOIN OTIMIZADO ===
         window.joinGame = async () => {
@@ -496,6 +636,10 @@
 
             statusBox.classList.remove('hidden');
             statusDiv.innerText = "Sincronizando via satélite...";
+
+            // START INTRO
+            isIntroPlaying = true;
+            playIntro();
 
             try {
                 if (!auth.currentUser) await signInAnonymously(auth);
@@ -539,14 +683,12 @@
             }
         };
 
-        // Cria o baralho global embaralhado
         function createDeck() {
             let deck = [];
             for (let i = 1; i <= TOTAL_CARDS; i++) deck.push(i);
             return deck.sort(() => Math.random() - 0.5);
         }
 
-        // Função para recriar baralho sem duplicar cartas que estão nas mãos
         function reshuffleDeck(currentPlayers) {
             const usedCards = new Set();
             currentPlayers.forEach(p => p.hand.forEach(c => usedCards.add(c)));
@@ -559,18 +701,17 @@
         }
 
         async function createRoom() {
-            // Gera baralho inicial
             const fullDeck = createDeck();
-            // Retira 6 cartas para o primeiro jogador
             const initialHand = fullDeck.splice(0, 6);
             
-            const newPlayer = { id: myId, name: myName, score: 0, hand: initialHand };
+            // Adiciona charId ao jogador
+            const newPlayer = { id: myId, name: myName, score: 0, hand: initialHand, charId: myCharacterId };
             
             try {
                 await setDoc(docRef, {
                     phase: 'lobby',
                     players: [newPlayer],
-                    deck: fullDeck, // Salva o resto do baralho
+                    deck: fullDeck, 
                     roundCount: 0,
                     witnessIndex: 0,
                     createdAt: new Date().toISOString()
@@ -587,13 +728,13 @@
             const data = snap.data();
             let currentDeck = data.deck || [];
             
-            // Se o baralho estiver vazio ou insuficiente, recria respeitando as mãos existentes
             if (currentDeck.length < 6) {
                 currentDeck = reshuffleDeck(data.players);
             }
             
             const myHand = currentDeck.splice(0, 6);
-            const newPlayer = { id: myId, name: myName, score: 0, hand: myHand };
+            // Adiciona charId ao jogador
+            const newPlayer = { id: myId, name: myName, score: 0, hand: myHand, charId: myCharacterId };
             const updatedPlayers = [...data.players, newPlayer];
 
             try {
@@ -605,8 +746,17 @@
 
         // === RENDERIZAÇÃO ===
         function renderGame(state) {
+            // Se a intro estiver rodando, não renderiza a tela do jogo ainda
+            if (isIntroPlaying) return;
+
             if (state.phase === 'lobby') {
-                document.getElementById('lobby-player-list').innerHTML = state.players.map(p => `<li>👮 ${p.name} ${p.id === myId ? '(VOCÊ)' : ''}</li>`).join('');
+                document.getElementById('lobby-player-list').innerHTML = state.players.map(p => {
+                    const img = getCharImg(p.charId);
+                    return `<li class="flex items-center gap-2">
+                        <img src="${img}" class="w-8 h-8 rounded-full border border-gray-600 bg-gray-200 avatar-small">
+                        <span>${p.name} ${p.id === myId ? '(VOCÊ)' : ''}</span>
+                    </li>`;
+                }).join('');
                 document.getElementById('screen-login').classList.add('hidden');
                 document.getElementById('screen-game').classList.add('hidden');
                 document.getElementById('screen-lobby').classList.remove('hidden');
@@ -621,20 +771,26 @@
 
             const witness = state.players[state.witnessIndex];
             document.getElementById('current-witness-name').innerText = witness ? witness.name : "Ninguém";
+            if (witness) document.getElementById('witness-avatar-header').src = getCharImg(witness.charId);
             
             const me = state.players.find(p => p.id === myId);
-            if(me) document.getElementById('my-score').innerText = me.score;
+            if(me) {
+                document.getElementById('my-score').innerText = me.score;
+                document.getElementById('my-avatar-header').src = getCharImg(me.charId);
+            }
 
             const isWitness = (witness && myId === witness.id);
             const phaseDisplay = document.getElementById('game-phase-display');
             if(phaseDisplay) phaseDisplay.innerText = state.phase.replace('_', ' ');
 
-            // ATUALIZAÇÃO: TOP 3 NO HEADER
+            // ATUALIZAÇÃO: TOP 3 COM AVATAR
             const top3 = [...state.players].sort((a,b) => b.score - a.score).slice(0, 3);
             const rankHtml = top3.map((p, i) => {
                 const medals = ["🥇", "🥈", "🥉"];
                 return `<div class="flex items-center gap-1 ${p.id === myId ? 'font-bold text-red-900' : 'text-gray-700'}">
-                    <span>${medals[i]} ${p.name.split(' ')[0]}: ${p.score}</span>
+                    <span>${medals[i]}</span>
+                    <img src="${getCharImg(p.charId)}" class="w-4 h-4 rounded-full border border-gray-400 bg-white avatar-small">
+                    <span>${p.name.split(' ')[0]}: ${p.score}</span>
                 </div>`;
             }).join('<span class="mx-1 text-gray-400">|</span>');
             document.getElementById('top-rank-display').innerHTML = rankHtml || "Carregando Ranking...";
@@ -650,6 +806,7 @@
                 if (state.winner) {
                     document.getElementById('winner-name').innerText = state.winner.name;
                     document.getElementById('winner-score').innerText = `${state.winner.score} Pontos`;
+                    document.getElementById('winner-avatar').src = getCharImg(state.winner.charId);
                 }
                 return;
             }
@@ -812,14 +969,21 @@
             const sorted = [...state.players].sort((a,b) => b.score - a.score);
             list.innerHTML = sorted.map((p, i) => 
                 `<li class="flex justify-between border-b border-dashed border-gray-400 py-1">
-                    <span>${i+1}. ${p.name}</span>
+                    <div class="flex items-center gap-2">
+                         <img src="${getCharImg(p.charId)}" class="w-6 h-6 rounded-full border border-gray-400 bg-white avatar-small">
+                         <span>${i+1}. ${p.name}</span>
+                    </div>
                     <span class="font-bold text-red-900">${p.score} pts</span>
                  </li>`
             ).join('');
             
             const witness = state.players[state.witnessIndex];
             document.getElementById('round-results').innerHTML = `
-                <p><strong>A Testemunha:</strong> ${witness ? witness.name : 'N/A'}</p>
+                <div class="flex items-center gap-2 mb-2">
+                    <strong>A Testemunha:</strong> 
+                    <img src="${getCharImg(witness.charId)}" class="w-6 h-6 rounded-full border border-gray-400 bg-white avatar-small">
+                    ${witness ? witness.name : 'N/A'}
+                </div>
                 <p><strong>Palavras:</strong> ${state.currentWords.join(" + ")}</p>
             `;
 
@@ -838,7 +1002,7 @@
                     Object.entries(state.votes).forEach(([voterId, targetId]) => {
                         if (targetId === cardObj.owner) {
                             const voter = state.players.find(p => p.id === voterId);
-                            if (voter) voters.push(voter.name.split(' ')[0]); // Pega só o primeiro nome
+                            if (voter) voters.push({name: voter.name.split(' ')[0], img: getCharImg(voter.charId)}); 
                         }
                     });
                 }
@@ -846,12 +1010,16 @@
                 const div = document.createElement('div');
                 div.className = `relative w-24 md:w-32 border-2 ${isWitnessCard ? 'border-red-600 shadow-[0_0_15px_rgba(220,38,38,0.5)]' : 'border-gray-400'} rounded overflow-visible bg-gray-200 flex flex-col mb-4`;
                 
-                // HTML dos votos (Post-its)
+                // HTML dos votos (Post-its com avatar)
                 let votersHtml = '';
                 if (voters.length > 0) {
-                    votersHtml = `<div class="absolute -top-2 -right-2 flex flex-col items-end gap-1">`;
-                    voters.forEach(vName => {
-                        votersHtml += `<span class="bg-yellow-200 text-black text-[9px] px-1 py-0.5 border border-yellow-400 shadow-sm rotate-3 transform origin-bottom-left whitespace-nowrap">🗳️ ${vName}</span>`;
+                    votersHtml = `<div class="absolute -top-4 -right-2 flex flex-col items-end gap-1 z-10">`;
+                    voters.forEach(v => {
+                        votersHtml += `
+                        <div class="flex items-center gap-1 bg-yellow-200 text-black text-[9px] px-1 py-0.5 border border-yellow-400 shadow-sm rotate-3 transform origin-bottom-left whitespace-nowrap">
+                            <img src="${v.img}" class="w-3 h-3 rounded-full border border-gray-600 bg-white avatar-small">
+                            ${v.name}
+                        </div>`;
                     });
                     votersHtml += `</div>`;
                 }
@@ -861,9 +1029,12 @@
                         <img src="${url}" class="w-full h-32 object-cover opacity-90">
                         ${votersHtml}
                     </div>
-                    <div class="text-[10px] p-1 text-center font-bold leading-tight ${isWitnessCard ? 'bg-red-600 text-white' : 'bg-gray-300 text-black'}">
-                        ${isWitnessCard ? '★ TESTEMUNHA ★' : ''}
-                        <div class="truncate">${owner ? owner.name : '???'}</div>
+                    <div class="text-[10px] p-1 text-center font-bold leading-tight flex flex-col items-center justify-center ${isWitnessCard ? 'bg-red-600 text-white' : 'bg-gray-300 text-black'}">
+                        ${isWitnessCard ? '<span class="text-[8px] mb-1">★ TESTEMUNHA ★</span>' : ''}
+                        <div class="flex items-center gap-1 justify-center w-full">
+                            <img src="${getCharImg(owner.charId)}" class="w-4 h-4 rounded-full border border-gray-500 bg-white avatar-small">
+                            <div class="truncate max-w-[60px]">${owner ? owner.name : '???'}</div>
+                        </div>
                     </div>
                 `;
                 revealedGrid.appendChild(div);
@@ -943,7 +1114,6 @@
         };
 
         async function calculateScores(finalVotes) {
-            // Usa getDoc para garantir estado atualizado do baralho
             const snap = await getDoc(docRef);
             if (!snap.exists()) return;
             const data = snap.data();
@@ -980,10 +1150,8 @@
                 });
             }
 
-            // Redistribuição de cartas com lógica de RESHUFFLE inteligente
             players.forEach(p => { 
                 if (currentDeck.length === 0) {
-                     // Deck vazio? Cria um novo que EXCLUI todas as cartas nas mãos dos jogadores
                      currentDeck = reshuffleDeck(players);
                 }
                 
@@ -1028,6 +1196,7 @@
             else audio.pause();
         };
 
+        renderCharacterSelection();
         generateRoomCode();
     </script>
 </body>
