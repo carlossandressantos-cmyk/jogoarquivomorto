@@ -205,7 +205,7 @@
             <div class="w-full md:w-1/3 flex flex-col justify-center border-l-2 border-gray-400 pl-6 border-dashed">
                 <div class="bg-yellow-100 p-4 border border-yellow-300 mb-6 text-sm">
                     <strong>INSTRUÇÕES:</strong><br>
-                    Mínimo: 1 Agente.<br>
+                    Jogadores: 3 a 8.<br>
                     Objetivo: 25 Pontos.<br>
                 </div>
                 
@@ -247,7 +247,7 @@
                     </div>
                 </div>
                 
-                <!-- Fase (Movido para ficar discreto ou integrado) -->
+                <!-- Fase -->
                 <div class="absolute top-0 right-0 -mt-2 -mr-2 hidden md:block">
                      <span id="game-phase-display" class="font-bold bg-black text-white px-2 py-1 text-[10px] rounded shadow-lg uppercase tracking-widest">...</span>
                 </div>
@@ -285,12 +285,19 @@
 
                 <!-- ÁREA: SELEÇÃO DE PALAVRAS (Só para Testemunha) -->
                 <div id="word-selection-area" class="hidden paper-texture p-4 mt-2">
-                    <h3 class="text-center font-bold mb-2">SELECIONE 2 PALAVRAS DO ARQUIVO</h3>
+                    <h3 class="text-center font-bold mb-2">SELECIONE 2 PALAVRAS</h3>
+                    
+                    <!-- INPUT PARA PALAVRA PERSONALIZADA (NOVO) -->
+                    <div class="flex gap-2 mb-2 border-b border-gray-400 pb-2">
+                        <input type="text" id="custom-word-input" class="w-full p-2 font-mono uppercase bg-white border border-gray-500" placeholder="DIGITE UMA PALAVRA..." maxlength="15">
+                        <button onclick="addCustomWord()" class="bg-gray-800 text-white px-4 font-bold hover:bg-black border border-black">+</button>
+                    </div>
+
                     <div id="word-grid" class="grid grid-cols-3 md:grid-cols-5 gap-2 max-h-[200px] overflow-y-auto p-2 border border-gray-400">
                         <!-- Palavras geradas via JS -->
                     </div>
                     
-                    <!-- BOTÕES DE AÇÃO: LIMPAR E CONFIRMAR (NOVO) -->
+                    <!-- BOTÕES DE AÇÃO: LIMPAR E CONFIRMAR -->
                     <div class="flex gap-2 mt-4">
                         <button onclick="clearWordSelection()" class="w-1/3 bg-gray-600 text-white py-2 font-bold hover:bg-gray-500 border-2 border-black tracking-widest text-xs md:text-sm">
                             LIMPAR
@@ -423,13 +430,53 @@
             document.getElementById('room-code-input').value = code;
         }
 
+        // FUNÇÃO NOVA: ADICIONAR PALAVRA PERSONALIZADA
+        window.addCustomWord = () => {
+            const input = document.getElementById('custom-word-input');
+            const word = input.value.trim().toUpperCase();
+            
+            if (!word) return;
+            if (selectedWords.includes(word)) { alert("Palavra já selecionada!"); return; }
+            if (selectedWords.length >= 2) { alert("Você já escolheu 2 palavras. Remova uma antes."); return; }
+
+            // Adiciona a palavra à lista lógica
+            selectedWords.push(word);
+            
+            // Cria o botão visualmente e já coloca como selecionado
+            const grid = document.getElementById('word-grid');
+            const btn = document.createElement('button');
+            btn.className = "text-xs p-1 bg-red-800 text-white border border-gray-400 font-bold border-2 border-yellow-500"; // Destaque extra
+            btn.innerText = word;
+            
+            // Lógica de clique igual aos outros botões
+            btn.onclick = () => {
+                if (selectedWords.includes(word)) {
+                    selectedWords = selectedWords.filter(w => w !== word);
+                    btn.classList.remove('bg-red-800', 'text-white', 'border-yellow-500');
+                    btn.classList.add('bg-gray-200', 'text-black');
+                } else if (selectedWords.length < 2) {
+                    selectedWords.push(word);
+                    btn.classList.remove('bg-gray-200', 'text-black');
+                    btn.classList.add('bg-red-800', 'text-white', 'border-yellow-500');
+                }
+                checkWitnessReady();
+            };
+
+            // Adiciona no topo da lista para fácil visualização
+            grid.prepend(btn);
+            
+            // Limpa o input
+            input.value = "";
+            checkWitnessReady();
+        }
+
         // FUNÇÃO NOVA: LIMPAR PALAVRAS SELECIONADAS
         window.clearWordSelection = () => {
             selectedWords = [];
             const grid = document.getElementById('word-grid');
             // Reseta o visual de todos os botões
             Array.from(grid.children).forEach(btn => {
-                btn.classList.remove('bg-red-800', 'text-white');
+                btn.classList.remove('bg-red-800', 'text-white', 'border-yellow-500');
                 btn.classList.add('bg-gray-200', 'text-black');
             });
             checkWitnessReady();
@@ -499,6 +546,18 @@
             return deck.sort(() => Math.random() - 0.5);
         }
 
+        // Função para recriar baralho sem duplicar cartas que estão nas mãos
+        function reshuffleDeck(currentPlayers) {
+            const usedCards = new Set();
+            currentPlayers.forEach(p => p.hand.forEach(c => usedCards.add(c)));
+            
+            let newDeck = [];
+            for(let i=1; i<=TOTAL_CARDS; i++) {
+                if(!usedCards.has(i)) newDeck.push(i);
+            }
+            return newDeck.sort(() => Math.random() - 0.5);
+        }
+
         async function createRoom() {
             // Gera baralho inicial
             const fullDeck = createDeck();
@@ -522,15 +581,16 @@
         }
 
         async function addSelfToRoom() {
-            // Usa getDoc para garantir que pegamos o deck atualizado antes de escrever
             const snap = await getDoc(docRef);
             if (!snap.exists()) return;
             
             const data = snap.data();
             let currentDeck = data.deck || [];
             
-            // Se o deck acabou (improvável no início), reseta
-            if (currentDeck.length < 6) currentDeck = createDeck();
+            // Se o baralho estiver vazio ou insuficiente, recria respeitando as mãos existentes
+            if (currentDeck.length < 6) {
+                currentDeck = reshuffleDeck(data.players);
+            }
             
             const myHand = currentDeck.splice(0, 6);
             const newPlayer = { id: myId, name: myName, score: 0, hand: myHand };
@@ -920,14 +980,17 @@
                 });
             }
 
-            // Redistribuição de cartas do Baralho Global
+            // Redistribuição de cartas com lógica de RESHUFFLE inteligente
             players.forEach(p => { 
+                if (currentDeck.length === 0) {
+                     // Deck vazio? Cria um novo que EXCLUI todas as cartas nas mãos dos jogadores
+                     currentDeck = reshuffleDeck(players);
+                }
+                
                 if (currentDeck.length > 0) {
                     p.hand.push(currentDeck.shift());
                 } else {
-                    // Se acabar, reinicia baralho (opcional, aqui apenas evita crash)
-                    currentDeck = createDeck();
-                    p.hand.push(currentDeck.shift());
+                    console.error("ERRO CRÍTICO: Não há cartas suficientes nem após reshuffle.");
                 }
             });
 
