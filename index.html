@@ -182,7 +182,23 @@
 
         <!-- TELA 1: LOGIN E SELEÇÃO DE SALA -->
         <div id="screen-login" class="paper-texture max-w-md mx-auto p-8 rounded shadow-2xl mt-10 text-center fade-in">
-            <h2 class="text-2xl title-font mb-6 border-b-2 border-gray-800 pb-2">Identificação</h2>
+            <h2 class="text-2xl title-font mb-4 border-b-2 border-gray-800 pb-2">Identificação</h2>
+
+            <!-- ÁREA DE COMUNICAÇÃO (NOVO) -->
+            <div class="mb-6 p-3 bg-blue-900/10 border-l-4 border-blue-800 text-left rounded">
+                <h3 class="font-bold text-blue-900 text-sm mb-1 flex items-center gap-2">
+                    📡 CANAL DE VOZ RECOMENDADO
+                </h3>
+                <p class="text-xs text-gray-800 mb-2 leading-tight">
+                    Para resolver o caso, a comunicação verbal é essencial. 
+                    Recomendamos chamada via WhatsApp ou nosso canal oficial:
+                </p>
+                <a href="https://discord.gg/ryubxhFT" target="_blank" class="block w-full text-center bg-[#5865F2] hover:bg-[#4752C4] text-white text-sm font-bold py-2 rounded transition-colors shadow-sm flex justify-center items-center gap-2">
+                    <!-- Icone Discord SVG -->
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037 3.12 3.12 0 0 0-.598 1.235 18.313 18.313 0 0 0-5.512 0 3.12 3.12 0 0 0-.598-1.235.074.074 0 0 0-.079-.037 19.791 19.791 0 0 0-4.885 1.515.069.069 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-2.595-9.699-6.274-13.669a.064.064 0 0 0-.03-.027ZM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.956 2.42-2.157 2.42Zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.086 2.157 2.419 0 1.334-.946 2.42-2.157 2.42Z"/></svg>
+                    ACESSAR DISCORD OFICIAL
+                </a>
+            </div>
             
             <!-- Aviso de Protocolo Local -->
             <div id="file-protocol-warning" class="hidden mb-4 p-3 bg-red-100 border-l-4 border-red-600 text-red-900 text-xs text-left">
@@ -256,6 +272,11 @@
                     <strong>INSTRUÇÕES:</strong><br>
                     Mínimo: 1 Agente.<br>
                     Objetivo: 35 Pontos.<br>
+                    <div class="mt-2 pt-2 border-t border-yellow-400">
+                        <a href="https://discord.gg/ryubxhFT" target="_blank" class="text-blue-800 font-bold hover:underline flex items-center gap-1">
+                            <span>🎧</span> Canal de Voz (Discord)
+                        </a>
+                    </div>
                 </div>
                 
                 <button onclick="showRules()" class="w-full mb-3 bg-gray-700 text-white py-3 font-bold hover:bg-gray-600 border-2 border-gray-900">
